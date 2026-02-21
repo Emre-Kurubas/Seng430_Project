@@ -11,6 +11,7 @@ The system allows healthcare professionals and students to upload datasets, prep
 ---
 
 ## 📂 Repository Structure
+
 Seng430_Project/
 │
 ├── frontend/ # React + Vite application
@@ -18,6 +19,7 @@ Seng430_Project/
 ├── docs/ # Documentation files
 ├── README.md
 └── SETUP.md
+
 ---
 
 ## 🌿 Branching Strategy
