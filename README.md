@@ -10,7 +10,6 @@
 [![GitHub Wiki](https://img.shields.io/badge/GitHub-Wiki-EA4336?style=for-the-badge&logo=github)](https://github.com/YourUsername/Seng430_Project/wiki)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=for-the-badge)](https://makeapullrequest.com)
 
-**[Explore the Docs](./docs)** · **[View Team Wiki](https://github.com/Emre-Kurubas/Seng430_Project/wiki/Team.md)** · **[Report Bug](https://github.com/YourUsername/Seng430_Project/issues)**
 
 </div>
 
