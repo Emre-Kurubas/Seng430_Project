@@ -1,7 +1,7 @@
 # 🏥 SENG 430 – Healthcare ML Training Tool
 
-[![GitHub Repository](https://img.shields.io/badge/GitHub-Repository-blue?logo=github)](https://github.com/YourUsername/Seng430_Project)
-[![GitHub Wiki](https://img.shields.io/badge/GitHub-Wiki-orange?logo=github)](https://github.com/YourUsername/Seng430_Project/wiki)
+[![GitHub Repository](https://img.shields.io/badge/GitHub-Repository-blue?logo=github)](https://github.com/Emre-Kurubas/Seng430_Project)
+[![GitHub Wiki](https://img.shields.io/badge/GitHub-Wiki-orange?logo=github)](https://github.com/Emre-Kurubas/Seng430_Project/wiki)
 
 > **A 7-step Machine Learning web application supporting 20 clinical domains.**
 
