@@ -116,7 +116,7 @@ We follow a strict **feature-branch workflow** to ensure high code quality.
 
 | Name | Role |
 | :--- | :--- |
-| **Cem Özal** | Lead Developer / UX designe |
+| **Cem Özal** | Lead Developer / UX designer |
 | **Sertaç Ataç** | QA / Documentation Lead |
 | **Can Eltayeb** | Developer / Scrum Master |
 | **Emre Kurubaş** | Product Owner |
