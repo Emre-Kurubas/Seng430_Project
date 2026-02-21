@@ -75,7 +75,7 @@ We strictly follow a feature-branch workflow to maintain code quality:
 | **Can Eltayeb** | Developer Scrum Master |
 | **Emre Kurubaş** | Product Owner |
 
-> 📖 **Read more about our team on the [Wiki Team Page](https://github.com/YourUsername/Seng430_Project/wiki/Team)**
+> 📖 **Read more about our team on the [Wiki Team Page](https://github.com/YourUsername/Seng430_Project/wiki/Team.md)**
 
 ---
 
