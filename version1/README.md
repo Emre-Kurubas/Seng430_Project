@@ -1,16 +1,76 @@
-# React + Vite
+# SENG 430 – Healthcare ML Training Tool
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This project is a 7-step Machine Learning web application supporting 20 clinical domains.  
+The system allows healthcare professionals and students to upload datasets, preprocess data, train ML models, and evaluate results through an interactive UI.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## 🚀 Tech Stack
 
-## React Compiler
+Frontend:
+- React 18
+- Vite
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Backend (Planned):
+- FastAPI
+- scikit-learn
 
-## Expanding the ESLint configuration
+Project Management:
+- Jira
+- GitHub
+- Figma
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+---
+
+## 📂 Repository Structure
+Seng430_Project/
+│
+├── frontend/ # React + Vite application
+├── backend/ # FastAPI backend (to be implemented)
+├── docs/ # Documentation files
+├── README.md
+└── SETUP.md
+
+---
+
+## 🌿 Branching Strategy
+
+We follow a feature-branch workflow:
+
+- `main` → protected production branch
+- `feature/US-XXX` → individual user story branches
+
+All changes must:
+1. Be developed in a feature branch
+2. Go through Pull Request
+3. Receive at least 1 approval before merging
+
+---
+
+## 📌 Project Goals
+
+- Implement 6 ML models:
+  - KNN
+  - SVM
+  - Decision Tree
+  - Random Forest
+  - Logistic Regression
+  - Naive Bayes
+- Support 20 clinical domains
+- Provide full 7-step ML workflow
+- Generate downloadable certificate upon completion
+
+---
+
+## 👥 Team
+
+- Cem Özal – Product Owner  
+- Sertaç Ataç – Lead Developer  
+- Can Eltayeb – Scrum Master  
+- Emre Kurubaş – QA / Documentation Lead  
+
+---
+
+## 📎 Course
+
+SENG 430 – Software Engineering Project
