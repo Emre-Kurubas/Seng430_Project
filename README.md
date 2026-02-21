@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&height=200&section=header&text=Healthcare%20ML%20Platform&fontSize=50&fontAlignY=35&animation=twinkling" width="100%" alt="Header" />
+<img src="https://capsule-render.vercel.app/api?type=waving&color=0:14532d,100:22c55e&height=200&section=header&text=%E2%9C%9A%20Healthcare%20ML%20Platform%20%E2%9C%9A&fontSize=48&fontAlignY=35&animation=twinkling&fontColor=ffffff" width="100%" alt="Healthcare ML Header" />
 
 # 🏥 SENG 430 – Healthcare ML Training Tool
 
