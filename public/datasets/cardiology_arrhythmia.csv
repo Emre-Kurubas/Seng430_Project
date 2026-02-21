@@ -1,0 +1,13 @@
+age,sex,heart_rate,qrs_duration,pr_interval,qt_interval,qt_corrected,p_axis,r_axis,t_axis,left_atrium,oblique_diameter,rr_interval,delta_wave,qrs_vector,T_vector,P_vector,QRST_vector,arrhythmia
+60,0,75,0.08,0.16,0.38,0.41,-30,60,45,4.0,5.2,0.80,no,normal,normal,normal,normal,0
+52,1,110,0.14,0.18,0.44,0.48,10,50,-20,4.5,5.8,0.55,yes,widened,inverted,bifid,abnormal,1
+45,0,68,0.09,0.15,0.40,0.42,-20,70,50,3.8,4.9,0.88,no,normal,normal,normal,normal,0
+68,1,95,0.12,0.20,0.46,0.50,-10,40,-30,5.1,6.2,0.63,no,normal,inverted,flat,abnormal,1
+38,0,80,0.08,0.14,0.36,0.38,-25,65,55,3.6,4.7,0.75,no,normal,normal,normal,normal,0
+73,0,130,0.16,0.22,0.50,0.54,15,35,-40,5.8,7.0,0.46,yes,widened,inverted,bifid,abnormal,1
+55,1,72,0.09,0.16,0.39,0.41,-28,62,48,3.9,5.0,0.83,no,normal,normal,normal,normal,0
+64,0,105,0.13,0.19,0.45,0.49,5,45,-25,4.8,5.9,0.57,no,normal,inverted,flat,abnormal,1
+41,1,76,0.08,0.15,0.37,0.39,-22,68,52,3.7,4.8,0.79,no,normal,normal,normal,normal,0
+70,0,115,0.15,0.21,0.48,0.52,12,38,-35,5.4,6.6,0.52,yes,widened,inverted,bifid,abnormal,1
+48,1,82,0.09,0.16,0.40,0.42,-18,64,50,4.0,5.1,0.73,no,normal,normal,normal,normal,0
+66,0,98,0.11,0.18,0.43,0.47,-5,42,-28,5.0,6.1,0.61,no,normal,inverted,flat,abnormal,1
