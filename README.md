@@ -80,35 +80,7 @@ Seng430_Project/
 └── 🛠️ SETUP.md          # Local environment setup and run guide
 ```
 
----
 
-## 🌿 Branching Strategy & Protection Rules
-
-We follow a strict **feature-branch workflow** to ensure high code quality.
-
-### 🔐 Branch Rules
-
-- **`main`** → Protected production branch  
-  - ❌ Direct commits are NOT allowed  
-  - ✅ Pull Request approval required  
-
-- **`feature/US-XXX`** → User story / feature branches  
-
----
-
-### 🔄 Development Workflow
-
-1. Create a new branch from `main`  
-   ```bash
-   git checkout -b feature/US-001-login
-   ```
-2. Commit your changes  
-3. Push to GitHub  
-4. Open a **Pull Request (PR)** to `main`  
-5. Wait for at least **1 team approval**  
-6. Merge and delete the feature branch  
-
-> Branch protection rules are configured on GitHub to enforce mandatory PR reviews before merging into `main`.
 
 ---
 
@@ -121,7 +93,6 @@ We follow a strict **feature-branch workflow** to ensure high code quality.
 | **Can Eltayeb** | Developer / Scrum Master |
 | **Emre Kurubaş** | Product Owner |
 
-📖 More details available on the **Team Wiki Page**.
 
 ---
 
