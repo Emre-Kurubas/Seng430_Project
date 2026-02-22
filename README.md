@@ -89,8 +89,8 @@ Seng430_Project/
 | Name | Role |
 | :--- | :--- |
 | **Cem Özal** | Lead Developer / UX designer |
-| **Sertaç Ataç** | QA / Documentation Lead |
-| **Can Eltayeb** | Developer / Scrum Master |
+| **Sertaç Ataç** | QA / Documentation Lead / Scrum Master|
+| **Can Eltayeb** | Developer |
 | **Emre Kurubaş** | Product Owner |
 
 
