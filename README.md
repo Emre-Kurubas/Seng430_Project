@@ -6,8 +6,8 @@
 
 *A powerful 7-step Machine Learning web application empowering healthcare professionals and students.*
 
-[![GitHub Repository](https://img.shields.io/badge/GitHub-Repository-181717?style=for-the-badge&logo=github)](https://github.com/YourUsername/Seng430_Project)
-[![GitHub Wiki](https://img.shields.io/badge/GitHub-Wiki-EA4336?style=for-the-badge&logo=github)](https://github.com/YourUsername/Seng430_Project/wiki)
+[![GitHub Repository](https://img.shields.io/badge/GitHub-Repository-181717?style=for-the-badge&logo=github)](https://github.com/Emre-Kurubas/Seng430_Project)
+[![GitHub Wiki](https://img.shields.io/badge/GitHub-Wiki-EA4336?style=for-the-badge&logo=github)](https://github.com/Emre-Kurubas/Seng430_Project/wiki)
 [![Figma Design](https://img.shields.io/badge/Figma-Wireframes-F24E1E?style=for-the-badge&logo=figma)](https://www.figma.com/design/08zEp7q7YnF9dxjbHF1X8W/HealthCareML?node-id=0-1&t=Ee9EAsGFmgRZm2Vq-1)
 
 </div>
