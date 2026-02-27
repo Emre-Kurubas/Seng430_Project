@@ -1,0 +1,510 @@
+/* Google Fonts — MUST be first */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap');
+
+/* Tailwind */
+@import "tailwindcss";
+@config "../tailwind.config.js";
+
+/* ═══════════════════════════════════════════════════════════════
+   HEALTH-AI ML TOOL — Global Styles
+   Premium design system with glassmorphism & micro-animations
+═══════════════════════════════════════════════════════════════ */
+
+/* ─── CSS Custom Properties ─────────────────────────────────── */
+:root {
+    --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+    --font-heading: 'Outfit', ui-sans-serif, system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+/* ─── Base ───────────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+html,
+body,
+#root {
+    height: 100%;
+    font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    font-family: 'Outfit', ui-sans-serif, system-ui, sans-serif;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+/* ─── Custom Scrollbar ───────────────────────────────────────── */
+::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(99, 102, 241, 0.25);
+    border-radius: 99px;
+    transition: background 0.2s;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(99, 102, 241, 0.5);
+}
+
+/* ─── Selection ──────────────────────────────────────────────── */
+::selection {
+    background: rgba(16, 185, 129, 0.25);
+    color: inherit;
+}
+
+/* ─── No-Scrollbar Utility ───────────────────────────────────── */
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+
+.no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+/* ─── Gradient Text ──────────────────────────────────────────── */
+.gradient-text {
+    background: linear-gradient(135deg, #10b981 0%, #6366f1 60%, #7c3aed 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* ─── Shimmer Loading ────────────────────────────────────────── */
+.shimmer {
+    background: linear-gradient(90deg,
+            rgba(255, 255, 255, 0) 0%,
+            rgba(255, 255, 255, 0.10) 50%,
+            rgba(255, 255, 255, 0) 100%);
+    background-size: 200% 100%;
+    animation: shimmer 2s linear infinite;
+}
+
+/* ─── Animations ─────────────────────────────────────────────── */
+@keyframes pulse-slow {
+
+    0%,
+    100% {
+        opacity: 0.3;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 0.6;
+        transform: scale(1.08);
+    }
+}
+
+@keyframes float {
+
+    0%,
+    100% {
+        transform: translateY(0px);
+    }
+
+    50% {
+        transform: translateY(-8px);
+    }
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: -200% center;
+    }
+
+    100% {
+        background-position: 200% center;
+    }
+}
+
+@keyframes scan-line {
+    0% {
+        transform: translateY(-100%);
+        opacity: 0;
+    }
+
+    5% {
+        opacity: 0.6;
+    }
+
+    95% {
+        opacity: 0.3;
+    }
+
+    100% {
+        transform: translateY(110vh);
+        opacity: 0;
+    }
+}
+
+@keyframes particle-float {
+    0% {
+        transform: translateY(0) translateX(0) rotate(0deg);
+        opacity: 0;
+    }
+
+    10% {
+        opacity: 0.7;
+    }
+
+    90% {
+        opacity: 0.3;
+    }
+
+    100% {
+        transform: translateY(-100vh) translateX(15px) rotate(360deg);
+        opacity: 0;
+    }
+}
+
+@keyframes border-glow {
+
+    0%,
+    100% {
+        box-shadow: 0 0 8px rgba(16, 185, 129, 0.2);
+    }
+
+    50% {
+        box-shadow: 0 0 24px rgba(16, 185, 129, 0.5), 0 0 48px rgba(99, 102, 241, 0.2);
+    }
+}
+
+.animate-pulse-slow {
+    animation: pulse-slow 9s ease-in-out infinite;
+}
+
+.animate-float {
+    animation: float 6s ease-in-out infinite;
+}
+
+.animate-border-glow {
+    animation: border-glow 3s ease-in-out infinite;
+}
+
+/* ─── Particles ──────────────────────────────────────────────── */
+.particle {
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+    animation: particle-float linear infinite;
+}
+
+/* ─── Card hover lift ────────────────────────────────────────── */
+.card-lift {
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+        box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-lift:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.18), 0 0 0 1px rgba(16, 185, 129, 0.12);
+}
+
+/* ─── Focus ring ─────────────────────────────────────────────── */
+*:focus-visible {
+    outline: 2px solid rgba(99, 102, 241, 0.55);
+    outline-offset: 2px;
+}
+
+/* ─── Range input ────────────────────────────────────────────── */
+input[type='range'] {
+    -webkit-appearance: none;
+    appearance: none;
+    cursor: pointer;
+}
+
+input[type='range']::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    margin-top: -6px;
+    /* center thumb over 4px track: (4px - 16px) / 2 = -6px */
+    border-radius: 50%;
+    background: linear-gradient(135deg, #10b981, #6366f1);
+    box-shadow: 0 0 8px rgba(99, 102, 241, 0.5);
+    cursor: pointer;
+    transition: transform 0.15s;
+}
+
+input[type='range']::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+}
+
+input[type='range']::-webkit-slider-runnable-track {
+    height: 4px;
+    border-radius: 99px;
+}
+
+/* ─── Mobile Responsiveness ──────────────────────────────── */
+/* Prevent horizontal overflow on all screens */
+body {
+    overflow-x: hidden;
+}
+
+/* Improve touch targets on mobile */
+@media (max-width: 640px) {
+    button {
+        min-height: 36px;
+    }
+
+    /* Ensure tables scroll horizontally on mobile */
+    .overflow-x-auto {
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Reduce particle count overhead on mobile */
+    .particle {
+        display: none;
+    }
+}
+
+/* Fix text overflow in narrow containers */
+.truncate-mobile {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Safe area insets for notched phones */
+@supports (padding: max(0px)) {
+    .safe-bottom {
+        padding-bottom: max(16px, env(safe-area-inset-bottom));
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PREMIUM VISUAL UPGRADES
+═══════════════════════════════════════════════════════════════ */
+
+/* ─── Nested Glassmorphism Depth ─────────────────────────────── */
+.glass-depth-1 {
+    background: rgba(15, 23, 42, 0.55);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.glass-depth-2 {
+    background: rgba(15, 23, 42, 0.35);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    box-shadow:
+        0 4px 16px rgba(0, 0, 0, 0.12),
+        inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.glass-depth-light-1 {
+    background: rgba(255, 255, 255, 0.72);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.06),
+        inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.glass-depth-light-2 {
+    background: rgba(255, 255, 255, 0.50);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(0, 0, 0, 0.04);
+    box-shadow:
+        0 4px 16px rgba(0, 0, 0, 0.04),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+/* ─── Step Header Accent ─────────────────────────────────────── */
+.step-accent {
+    position: relative;
+    overflow: hidden;
+}
+
+.step-accent::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #10b981, #6366f1, #7c3aed, #ec4899);
+    background-size: 300% 100%;
+    animation: accent-slide 4s ease-in-out infinite;
+}
+
+@keyframes accent-slide {
+
+    0%,
+    100% {
+        background-position: 0% 50%;
+    }
+
+    50% {
+        background-position: 100% 50%;
+    }
+}
+
+/* Step number ambient glow */
+.step-number-glow {
+    text-shadow: 0 0 20px currentColor, 0 0 40px currentColor;
+}
+
+/* ─── Progress Bar Glow Trail ────────────────────────────────── */
+.progress-glow {
+    position: relative;
+}
+
+.progress-glow::after {
+    content: '';
+    position: absolute;
+    top: -3px;
+    right: 0;
+    width: 40px;
+    height: 9px;
+    border-radius: 99px;
+    background: radial-gradient(ellipse at right, rgba(99, 102, 241, 0.7), transparent);
+    filter: blur(4px);
+    animation: glow-pulse 2s ease-in-out infinite;
+}
+
+@keyframes glow-pulse {
+
+    0%,
+    100% {
+        opacity: 0.5;
+    }
+
+    50% {
+        opacity: 1;
+    }
+}
+
+/* ─── Feature Bar Hover Glow ─────────────────────────────────── */
+.feature-bar-container:hover .feature-bar-fill {
+    filter: drop-shadow(0 0 8px rgba(99, 102, 241, 0.5));
+}
+
+.feature-bar-container:hover {
+    transform: translateX(4px);
+    transition: transform 0.25s ease;
+}
+
+.feature-bar-container {
+    transition: transform 0.25s ease;
+}
+
+/* ─── Gradient Feature Bar ───────────────────────────────────── */
+.feature-gradient-bar {
+    background: linear-gradient(90deg, #10b981, #6366f1, #7c3aed);
+    background-size: 200% 100%;
+    animation: gradient-shift 3s ease-in-out infinite;
+}
+
+@keyframes gradient-shift {
+
+    0%,
+    100% {
+        background-position: 0% 50%;
+    }
+
+    50% {
+        background-position: 100% 50%;
+    }
+}
+
+/* ─── Metric Count-Up Shimmer ────────────────────────────────── */
+.metric-value-glow {
+    position: relative;
+}
+
+.metric-value-glow::after {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.15), transparent);
+    border-radius: inherit;
+    animation: metric-shimmer 2s ease-in-out;
+    pointer-events: none;
+    opacity: 0;
+}
+
+@keyframes metric-shimmer {
+    0% {
+        opacity: 1;
+        transform: translateX(-100%);
+    }
+
+    70% {
+        opacity: 1;
+        transform: translateX(100%);
+    }
+
+    100% {
+        opacity: 0;
+        transform: translateX(100%);
+    }
+}
+
+/* ─── Footer Gradient Border ─────────────────────────────────── */
+.footer-glow {
+    position: relative;
+}
+
+.footer-glow::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 5%;
+    right: 5%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, #10b981, #6366f1, #7c3aed, transparent);
+}
+
+/* ─── Card Inner Shine ───────────────────────────────────────── */
+.card-inner-shine {
+    position: relative;
+    overflow: hidden;
+}
+
+.card-inner-shine::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 50%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.03), transparent);
+    transform: skewX(-20deg);
+    transition: left 0.7s ease;
+    pointer-events: none;
+}
+
+.card-inner-shine:hover::after {
+    left: 100%;
+}
