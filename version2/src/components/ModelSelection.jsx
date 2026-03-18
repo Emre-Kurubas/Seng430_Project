@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 // eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from 'framer-motion';
-import { Settings, Play, Plus, Activity, GitBranch, Binary, Network, TrendingUp, Info, CheckCircle2, ArrowRight } from 'lucide-react';
+import { Settings, Play, Plus, Activity, GitBranch, Binary, Network, TrendingUp, Info, CheckCircle2, ArrowRight, HelpCircle } from 'lucide-react';
 import ModelVisualizer from './ModelVisualizations';
+import Tooltip from './Tooltip';
 
 const VIZ_CONTENT = {
     knn: {
@@ -125,17 +126,27 @@ const ModelSelection = ({ isDarkMode, onNext, onPrev }) => {
         }, 600);
     };
 
-    // Simulator for "Training"
+    // Simulator for "Training" (Debounced)
     useEffect(() => {
         if (autoRetrain) {
-            trainModel();
+            const timer = setTimeout(() => {
+                trainModel();
+            }, 300);
+            return () => clearTimeout(timer);
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [params, selectedModel]);
+    }, [params, selectedModel, autoRetrain]);
 
     const addToComparison = () => {
-        if (lastResult && !comparisonList.find(r => r.id === lastResult.id)) {
-            setComparisonList([...comparisonList, lastResult]);
+        if (lastResult) {
+            // No duplicates logic: check model name + settings
+            const isDuplicate = comparisonList.some(r =>
+                r.modelName === lastResult.modelName &&
+                r.settings === lastResult.settings
+            );
+
+            if (!isDuplicate) {
+                setComparisonList([...comparisonList, lastResult]);
+            }
         }
     };
 
@@ -197,20 +208,32 @@ const ModelSelection = ({ isDarkMode, onNext, onPrev }) => {
                 {/* Left Col: Model Selection & Params */}
                 <div className="lg:col-span-4 space-y-6">
 
-                    {/* Algorithm Selector */}
-                    <div className={`p-1 rounded-xl grid grid-cols-3 gap-1 ${isDarkMode ? 'bg-slate-800' : 'bg-slate-100'}`}>
-                        {MODELS.map(m => (
-                            <button
-                                key={m.id}
-                                onClick={() => setSelectedModel(m.id)}
-                                className={`py-2 px-1 text-xs font-medium rounded-lg transition-all flex flex-col items-center justify-center gap-1 ${selectedModel === m.id
-                                    ? (isDarkMode ? 'bg-slate-700 text-white shadow' : 'bg-white text-slate-900 shadow')
-                                    : (isDarkMode ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-700')
-                                    }`}
-                            >
-                                {m.name.split(' ')[0]}
-                            </button>
-                        ))}
+                    {/* Algorithm Selector (Tabs) */}
+                    <div className="relative group">
+                        <div className={`flex overflow-x-auto pb-2 mb-2 scrollbar-hide gap-2 p-1.5 rounded-xl ${isDarkMode ? 'bg-slate-900/60' : 'bg-slate-100'}`}>
+                            {MODELS.map(m => (
+                                <button
+                                    key={m.id}
+                                    onClick={() => setSelectedModel(m.id)}
+                                    className={`relative flex-shrink-0 px-4 py-3 rounded-lg font-bold transition-all flex flex-col items-center gap-2 min-w-[100px] overflow-hidden ${selectedModel === m.id
+                                        ? (isDarkMode ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'bg-white text-indigo-600 shadow-sm')
+                                        : (isDarkMode ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-800' : 'text-slate-500 hover:text-slate-700 hover:bg-white/50')
+                                        }`}
+                                >
+                                    {React.createElement(m.icon, { className: `w-5 h-5 ${selectedModel === m.id ? 'animate-pulse' : ''}` })}
+                                    <span className="text-[10px] uppercase tracking-wider">{m.name.split(' ')[0]}</span>
+                                    {selectedModel === m.id && (
+                                        <motion.div
+                                            layoutId="activeTabGlow"
+                                            className="absolute bottom-0 left-0 right-0 h-1 bg-white/40"
+                                            initial={false}
+                                        />
+                                    )}
+                                </button>
+                            ))}
+                        </div>
+                        {/* Scroll hint for mobile */}
+                        <div className="md:hidden absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-slate-900/40 to-transparent pointer-events-none" />
                     </div>
 
                     {/* Parameter Card */}
@@ -236,9 +259,13 @@ const ModelSelection = ({ isDarkMode, onNext, onPrev }) => {
                             {/* Dynamic Inputs based on Model */}
                             {selectedModel === 'knn' && (
                                 <>
-                                    <div className="space-y-2">
-                                        <div className="flex justify-between">
-                                            <label className={`text-sm font-medium ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>K — Neighbors to Compare</label>
+                                    <div className="space-y-3">
+                                        <div className="flex justify-between items-center">
+                                            <Tooltip isDarkMode={isDarkMode} content="The number of previous patients to look at. Lower K is more sensitive to outliers; higher K looks at the 'bigger picture' of similar cases.">
+                                                <label className={`text-sm font-medium flex items-center gap-1.5 cursor-help ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                                                    K — Neighbors <HelpCircle className="w-3.5 h-3.5 opacity-50" />
+                                                </label>
+                                            </Tooltip>
                                             <span className={`text-sm font-mono font-bold ${isDarkMode ? 'text-indigo-400' : 'text-indigo-600'}`}>{params.knn.k}</span>
                                         </div>
                                         <input
@@ -256,7 +283,11 @@ const ModelSelection = ({ isDarkMode, onNext, onPrev }) => {
                                         </div>
                                     </div>
                                     <div className="space-y-2">
-                                        <label className={`text-sm font-medium ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Distance Measure</label>
+                                        <Tooltip isDarkMode={isDarkMode} content="How the AI calculates 'similarity'. Euclidean is straight-line map distance; Manhattan is street-grid distance.">
+                                            <label className={`text-sm font-medium flex items-center gap-1.5 cursor-help ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                                                Distance Measure <HelpCircle className="w-3.5 h-3.5 opacity-50" />
+                                            </label>
+                                        </Tooltip>
                                         <select
                                             className={`w-full p-2 rounded-lg border text-sm outline-none ${isDarkMode ? 'bg-slate-900 border-slate-600 text-slate-300' : 'bg-slate-50 border-slate-300 text-slate-700'}`}
                                             value={params.knn.metric}
@@ -271,9 +302,13 @@ const ModelSelection = ({ isDarkMode, onNext, onPrev }) => {
 
                             {selectedModel === 'svm' && (
                                 <>
-                                    <div className="space-y-2">
-                                        <div className="flex justify-between">
-                                            <label className={`text-sm font-medium ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>C — Strictness of Boundary</label>
+                                    <div className="space-y-3">
+                                        <div className="flex justify-between items-center">
+                                            <Tooltip isDarkMode={isDarkMode} content="Strictness of the boundary. Higher C tries for zero errors but may overfit; lower C allows some overlap for a smoother general rule.">
+                                                <label className={`text-sm font-medium flex items-center gap-1.5 cursor-help ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                                                    C — Strictness <HelpCircle className="w-3.5 h-3.5 opacity-50" />
+                                                </label>
+                                            </Tooltip>
                                             <span className={`text-sm font-mono font-bold ${isDarkMode ? 'text-indigo-400' : 'text-indigo-600'}`}>{params.svm.c}</span>
                                         </div>
                                         <input
@@ -291,7 +326,11 @@ const ModelSelection = ({ isDarkMode, onNext, onPrev }) => {
                                         </div>
                                     </div>
                                     <div className="space-y-2">
-                                        <label className={`text-sm font-medium ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Kernel Type</label>
+                                        <Tooltip isDarkMode={isDarkMode} content="The shape of the dividing line. RBF handles complex curves; Linear is for simple straight-line splits.">
+                                            <label className={`text-sm font-medium flex items-center gap-1.5 cursor-help ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                                                Kernel Type <HelpCircle className="w-3.5 h-3.5 opacity-50" />
+                                            </label>
+                                        </Tooltip>
                                         <select
                                             className={`w-full p-2 rounded-lg border text-sm outline-none ${isDarkMode ? 'bg-slate-900 border-slate-600 text-slate-300' : 'bg-slate-50 border-slate-300 text-slate-700'}`}
                                             value={params.svm.kernel}
@@ -306,9 +345,13 @@ const ModelSelection = ({ isDarkMode, onNext, onPrev }) => {
                             )}
 
                             {selectedModel === 'dt' && (
-                                <div className="space-y-2">
-                                    <div className="flex justify-between">
-                                        <label className={`text-sm font-medium ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Maximum Depth</label>
+                                <div className="space-y-3">
+                                    <div className="flex justify-between items-center">
+                                        <Tooltip isDarkMode={isDarkMode} content="The number of questions in the flowchart. Deep trees are very specific but can 'overfit' by memorizing random noise in the training group.">
+                                            <label className={`text-sm font-medium flex items-center gap-1.5 cursor-help ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                                                Maximum Depth <HelpCircle className="w-3.5 h-3.5 opacity-50" />
+                                            </label>
+                                        </Tooltip>
                                         <span className={`text-sm font-mono font-bold ${isDarkMode ? 'text-indigo-400' : 'text-indigo-600'}`}>{params.dt.maxDepth}</span>
                                     </div>
                                     <input
@@ -328,9 +371,13 @@ const ModelSelection = ({ isDarkMode, onNext, onPrev }) => {
                             )}
 
                             {selectedModel === 'rf' && (
-                                <div className="space-y-2">
-                                    <div className="flex justify-between">
-                                        <label className={`text-sm font-medium ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Number of Trees</label>
+                                <div className="space-y-3">
+                                    <div className="flex justify-between items-center">
+                                        <Tooltip isDarkMode={isDarkMode} content="The number of individual trees voting. More trees lead to a more stable consensus, reducing the influence of individual 'lucky' trees.">
+                                            <label className={`text-sm font-medium flex items-center gap-1.5 cursor-help ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                                                Number of Trees <HelpCircle className="w-3.5 h-3.5 opacity-50" />
+                                            </label>
+                                        </Tooltip>
                                         <span className={`text-sm font-mono font-bold ${isDarkMode ? 'text-indigo-400' : 'text-indigo-600'}`}>{params.rf.trees}</span>
                                     </div>
                                     <input
@@ -350,9 +397,13 @@ const ModelSelection = ({ isDarkMode, onNext, onPrev }) => {
                             )}
 
                             {selectedModel === 'lr' && (
-                                <div className="space-y-2">
-                                    <div className="flex justify-between">
-                                        <label className={`text-sm font-medium ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>C — Regularisation Strength</label>
+                                <div className="space-y-3">
+                                    <div className="flex justify-between items-center">
+                                        <Tooltip isDarkMode={isDarkMode} content="Simplifies the model. Higher C allows a complex, wiggly curve; lower C forces a simpler, flatter curve to prevent over-reacting to small noise.">
+                                            <label className={`text-sm font-medium flex items-center gap-1.5 cursor-help ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                                                C — Regularisation <HelpCircle className="w-3.5 h-3.5 opacity-50" />
+                                            </label>
+                                        </Tooltip>
                                         <span className={`text-sm font-mono font-bold ${isDarkMode ? 'text-indigo-400' : 'text-indigo-600'}`}>{params.lr.c}</span>
                                     </div>
                                     <input
@@ -372,9 +423,13 @@ const ModelSelection = ({ isDarkMode, onNext, onPrev }) => {
                             )}
 
                             {selectedModel === 'nb' && (
-                                <div className="space-y-2">
-                                    <div className="flex justify-between">
-                                        <label className={`text-sm font-medium ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Variance Smoothing</label>
+                                <div className="space-y-3">
+                                    <div className="flex justify-between items-center">
+                                        <Tooltip isDarkMode={isDarkMode} content="A safety factor that prevents a zero probability just because we haven't seen a specific combination of traits in the training data yet.">
+                                            <label className={`text-sm font-medium flex items-center gap-1.5 cursor-help ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                                                Variance Smoothing <HelpCircle className="w-3.5 h-3.5 opacity-50" />
+                                            </label>
+                                        </Tooltip>
                                         <span className={`text-sm font-mono font-bold ${isDarkMode ? 'text-indigo-400' : 'text-indigo-600'}`}>{params.nb.smoothing.toExponential(1)}</span>
                                     </div>
                                     <input
@@ -474,8 +529,12 @@ const ModelSelection = ({ isDarkMode, onNext, onPrev }) => {
                                             <td className="px-6 py-4 font-medium">
                                                 {res.modelName} <span className="opacity-50 text-xs ml-1">({res.settings})</span>
                                             </td>
-                                            <td className="px-6 py-4 font-bold text-emerald-500">{res.accuracy}</td>
-                                            <td className="px-6 py-4">{res.sensitivity}</td>
+                                            <td className={`px-6 py-4 font-bold ${parseFloat(res.accuracy) >= 0.8 ? 'text-emerald-500' : parseFloat(res.accuracy) >= 0.7 ? 'text-amber-500' : 'text-rose-500'}`}>
+                                                {res.accuracy}
+                                            </td>
+                                            <td className={`px-6 py-4 font-semibold ${parseFloat(res.sensitivity) >= 0.7 ? (isDarkMode ? 'text-emerald-400' : 'text-emerald-600') : (isDarkMode ? 'text-rose-400' : 'text-rose-600')}`}>
+                                                {res.sensitivity}
+                                            </td>
                                             <td className="px-6 py-4">{res.specificity}</td>
                                             <td className="px-6 py-4">{res.auc}</td>
                                         </tr>
@@ -530,14 +589,15 @@ const ModelSelection = ({ isDarkMode, onNext, onPrev }) => {
                                                     threshold: {(thresholds[metric] * 100).toFixed(0)}%
                                                 </span>
                                             </div>
-                                            <div className="space-y-1.5">
+                                            <div className="space-y-1.5 relative py-2">
+                                                {/* Comparison Bars */}
                                                 {comparisonList.map((res, i) => {
                                                     const val = parseFloat(res[metric]);
                                                     const pct = Math.round(val * 100);
                                                     const isBest = val === best;
                                                     const passes = val >= thresholds[metric];
                                                     return (
-                                                        <div key={res.id} className="flex items-center gap-3">
+                                                        <div key={res.id} className="flex items-center gap-3 relative z-10">
                                                             <span className={`text-[10px] font-mono w-[80px] sm:w-[120px] shrink-0 truncate ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
                                                                 {res.modelName.split(' ').slice(-1)[0]}
                                                                 {isBest && <span className="ml-1 text-amber-400">★</span>}
@@ -556,12 +616,28 @@ const ModelSelection = ({ isDarkMode, onNext, onPrev }) => {
                                                         </div>
                                                     );
                                                 })}
-                                                {/* Threshold marker */}
-                                                <div className="relative h-0">
-                                                    <div
-                                                        className={`absolute top-0 w-px h-3 ${isDarkMode ? 'bg-red-500/60' : 'bg-red-400/60'}`}
-                                                        style={{ left: `calc(${thresholds[metric] * 100}% + 120px + 12px)` }}
-                                                    />
+
+                                                {/* Clinical Threshold Line Overlay */}
+                                                <div className="absolute inset-0 flex items-center gap-3 pointer-events-none px-0">
+                                                    {/* Matches label width */}
+                                                    <div className="w-[80px] sm:w-[120px] shrink-0" />
+                                                    
+                                                    {/* Matches bar area width */}
+                                                    <div className="flex-1 h-full relative">
+                                                        <div 
+                                                            className={`absolute top-0 bottom-0 w-[2px] ${isDarkMode ? 'bg-red-500/50' : 'bg-red-500/40'} border-l border-white/10`}
+                                                            style={{ left: `${thresholds[metric] * 100}%` }}
+                                                        >
+                                                            <div className={`absolute -top-1 px-1 -translate-x-1/2 -translate-y-full text-[8px] font-black uppercase tracking-tighter rounded ${isDarkMode ? 'bg-red-500/20 text-red-400' : 'bg-red-100 text-red-600'}`}>
+                                                                Limit
+                                                            </div>
+                                                            {/* Dot at the bottom of the line for visual anchor */}
+                                                            <div className="absolute bottom-0 -translate-x-[40%] w-1.5 h-1.5 rounded-full bg-red-500/40" />
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    {/* Matches percentage width */}
+                                                    <div className="w-10" />
                                                 </div>
                                             </div>
                                         </div>

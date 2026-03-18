@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 // eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from 'framer-motion';
-import { Upload, AlertTriangle, ArrowRight, AlertCircle, Database } from 'lucide-react';
+import { Upload, AlertTriangle, ArrowRight, AlertCircle, Database, FileWarning, CheckCircle2, XCircle } from 'lucide-react';
 import ColumnMapper from './ColumnMapper';
 import Papa from 'papaparse';
 
@@ -92,16 +92,23 @@ const DataExploration = ({ isDarkMode, onNext, onPrev, domain, onPatientCountCha
     const [stats, setStats] = useState({ patients: 0, measurements: 0, missing: '0%' });
     const [uploadedFileName, setUploadedFileName] = useState('');
     const [isDragging, setIsDragging] = useState(false);
+    const [showBlockedBanner, setShowBlockedBanner] = useState(false);
+    const [uploadError, setUploadError] = useState('');
+    const [uploadSuccess, setUploadSuccess] = useState(false);
+    const [mapperColumns, setMapperColumns] = useState([]);
 
     // Re-load when domain changes or user switches back to default dataset
     useEffect(() => {
         if (useDefaultDataset) {
             handleDefaultDataset();
+            // Reset mapping when domain changes
+            setIsMapped(false);
+            setShowBlockedBanner(false);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [useDefaultDataset, domain?.name]);
 
-    const processCSVResults = (results) => {
+    const processCSVResults = useCallback((results) => {
         const data = results.data;
         const fields = results.meta.fields;
         if (!data || data.length === 0) { setIsLoading(false); return; }
@@ -111,7 +118,7 @@ const DataExploration = ({ isDarkMode, onNext, onPrev, domain, onPatientCountCha
         let totalCells = patients * numMeasurements;
         let emptyCells = 0;
 
-        const newMeasurements = fields.map(field => {
+        const newMeasurements = fields.map((field, idx) => {
             let missingCount = 0;
             data.forEach(row => {
                 const val = row[field];
@@ -128,12 +135,24 @@ const DataExploration = ({ isDarkMode, onNext, onPrev, domain, onPatientCountCha
             let status = 'ready';
             if (type === 'Identifier') { action = 'Exclude — Not a clinical measurement'; status = 'exclude'; }
             else if (missingPctVal > 0) { action = 'Fill Missing Values'; status = 'warning'; }
-            return { name: field, type, missing: missingPctVal.toFixed(1) + '%', action, status };
+            return { name: field, type, missing: missingPctVal.toFixed(1) + '%', action, status, missingPctVal, isTarget: idx === fields.length - 1 };
         });
 
         const missingTotalPct = ((emptyCells / totalCells) * 100).toFixed(1);
         setStats({ patients, measurements: numMeasurements, missing: missingTotalPct + '%' });
         setMeasurements(newMeasurements);
+
+        // Build mapper columns for ColumnMapper
+        const mapCols = fields.map((field, idx) => {
+            const m = newMeasurements[idx];
+            return {
+                name: field,
+                type: m.type,
+                missingPct: m.missingPctVal,
+                isTarget: idx === fields.length - 1,
+            };
+        });
+        setMapperColumns(mapCols);
 
         // Auto-set target column to last field
         const lastField = fields[fields.length - 1];
@@ -153,12 +172,15 @@ const DataExploration = ({ isDarkMode, onNext, onPrev, domain, onPatientCountCha
 
         onPatientCountChange?.(patients);
         setIsLoading(false);
-    };
+        setUploadSuccess(true);
+    }, [onPatientCountChange]);
 
-    const handleDefaultDataset = () => {
+    const handleDefaultDataset = useCallback(() => {
         setIsLoading(true);
         setMeasurements([]);
         setClassBalance({});
+        setUploadError('');
+        setUploadSuccess(false);
         const filename = DATASET_MAP[domain?.name] || 'cardiology.csv';
         Papa.parse('/datasets/' + filename, {
             download: true,
@@ -168,50 +190,130 @@ const DataExploration = ({ isDarkMode, onNext, onPrev, domain, onPatientCountCha
             error: (err) => {
                 console.error('Error loading dataset:', err);
                 setIsLoading(false);
+                setUploadError('Failed to load the default dataset. Please try again.');
             }
         });
+    }, [domain?.name, processCSVResults]);
+
+    const validateFile = (file) => {
+        // Check extension
+        if (!file.name.toLowerCase().endsWith('.csv')) {
+            return 'Invalid file type. Please upload a .csv file only.';
+        }
+        // Check size (50MB max)
+        if (file.size > 50 * 1024 * 1024) {
+            return 'File is too large. Maximum file size is 50 MB.';
+        }
+        // Check empty file
+        if (file.size === 0) {
+            return 'The uploaded file is empty. Please select a valid CSV file.';
+        }
+        return null;
     };
 
     const handleFileUpload = (e) => {
         const file = e.type === 'drop' ? e.dataTransfer.files[0] : e.target.files[0];
         if (!file) return;
+
+        setUploadError('');
+        setUploadSuccess(false);
+
+        // Validate file
+        const error = validateFile(file);
+        if (error) {
+            setUploadError(error);
+            return;
+        }
+
         setIsLoading(true);
         setMeasurements([]);
         setClassBalance({});
         setUploadedFileName(file.name);
         setUseDefaultDataset(false);
+        setIsMapped(false);
+        setShowBlockedBanner(false);
+
         Papa.parse(file, {
             header: true,
             skipEmptyLines: true,
-            complete: processCSVResults,
+            complete: (results) => {
+                // Validate parsed data
+                if (!results.data || results.data.length === 0) {
+                    setUploadError('The CSV file contains no data rows. Please check the file and try again.');
+                    setIsLoading(false);
+                    return;
+                }
+                if (!results.meta.fields || results.meta.fields.length < 2) {
+                    setUploadError('The CSV file must have at least 2 columns (1 feature + 1 target). Found: ' + (results.meta.fields?.length || 0));
+                    setIsLoading(false);
+                    return;
+                }
+                processCSVResults(results);
+            },
             error: (err) => {
-                console.error('Error loading dataset:', err);
+                console.error('Error parsing CSV:', err);
+                setUploadError('Failed to parse the CSV file. Please check the file format and try again.');
                 setIsLoading(false);
             }
         });
     };
 
-    const handleMapperSave = () => {
-        setIsMapped(true);
+    const handleMapperSave = (schemaOK) => {
+        if (schemaOK) {
+            setIsMapped(true);
+            setShowBlockedBanner(false);
+        }
         setIsMapperOpen(false);
     };
 
+    const handleNextClick = () => {
+        if (!isMapped) {
+            setShowBlockedBanner(true);
+            // Auto-dismiss after 5 seconds
+            setTimeout(() => setShowBlockedBanner(false), 5000);
+            return;
+        }
+        onNext();
+    };
 
+    const formatColumnName = (col) => {
+        const mapping = {
+            'DEATH_EVENT': 'Readmitted within 30 days (Yes / No)',
+            'diagnosis': 'Diagnosis category (Malignant / Benign)',
+            'Outcome': 'Clinical Outcome (Yes / No)',
+            'classification': 'Disease Classification (CKD / Not CKD)',
+            'stroke': 'Stroke occurrence (Yes / No)',
+            'SepsisLabel': 'Sepsis onset (Yes / No)',
+            'Biopsy': 'Biopsy Result (Yes / No)',
+            'arrhythmia': 'Arrhythmia presence (Yes / No)',
+            'status': 'Disease Status (Positive / Negative)',
+            'Finding_Label': 'Finding Label (Normal / Abnormal)',
+            'fetal_health': 'Fetal Health (Normal / Suspect / Pathological)',
+            'readmitted': 'Readmission (<30 / >30 / No)',
+            'class': 'Classification (Normal / Abnormal)',
+            'dx_type': 'Diagnosis Type (Benign / Malignant)',
+            'severity': 'Severity Grade',
+            'anemia_type': 'Anaemia Type (Multi-class)',
+            'exacerbation': 'Exacerbation Risk (Yes / No)',
+            'Dataset': 'Liver Disease (Yes / No)',
+        };
+        if (mapping[col]) return mapping[col];
+        return col.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    };
 
     return (
         <div className="w-full space-y-6 animate-in fade-in duration-500">
             {/* Header */}
-            <div className={'p-4 sm:p-6 rounded-2xl border shadow-sm ' + (isDarkMode ? 'bg-slate-800/50 border-slate-700' : 'bg-white border-slate-200')}>
+            <div className={'p-4 sm:p-6 rounded-2xl border shadow-sm step-accent ' + (isDarkMode ? 'bg-slate-800/50 border-slate-700' : 'bg-white border-slate-200')}>
                 <div className="flex items-center justify-between mb-4">
                     <span className={'text-xs font-bold px-2 py-1 rounded-full ' + (isDarkMode ? 'bg-indigo-500/20 text-indigo-300' : 'bg-indigo-100 text-indigo-700')}>
                         STEP 2 OF 7
                     </span>
                     <button
-                        onClick={onNext}
-                        disabled={!isMapped}
+                        onClick={handleNextClick}
                         className={'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ' + (isMapped
-                            ? 'bg-slate-900 text-white hover:bg-slate-800 shadow-md hover:shadow-lg'
-                            : 'bg-slate-200 text-slate-400 cursor-not-allowed')}
+                            ? 'bg-emerald-600 text-white hover:bg-emerald-500 shadow-md hover:shadow-lg hover:scale-105 active:scale-95'
+                            : isDarkMode ? 'bg-slate-700 text-slate-400 hover:bg-slate-600' : 'bg-slate-200 text-slate-400 hover:bg-slate-300')}
                     >
                         Next Step <ArrowRight className="w-4 h-4" />
                     </button>
@@ -223,6 +325,66 @@ const DataExploration = ({ isDarkMode, onNext, onPrev, domain, onPatientCountCha
                     Before training any model, we examine what data is available. Use the default dataset or upload your own CSV file of de-identified patient records.
                 </p>
             </div>
+
+            {/* ── BLOCKED BANNER: Red warning when trying to bypass Column Mapper ── */}
+            <AnimatePresence>
+                {showBlockedBanner && !isMapped && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -10, scaleY: 0.9 }}
+                        animate={{ opacity: 1, y: 0, scaleY: 1 }}
+                        exit={{ opacity: 0, y: -10, scaleY: 0.9 }}
+                        transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+                        className={`p-4 rounded-xl border-2 flex items-start gap-4 shadow-lg ${isDarkMode
+                            ? 'bg-red-950/40 border-red-500/50 text-red-100'
+                            : 'bg-red-50 border-red-300 text-red-800'}`}
+                    >
+                        <div className={`p-2 rounded-full shrink-0 ${isDarkMode ? 'bg-red-500/20' : 'bg-red-100'}`}>
+                            <XCircle className={`w-6 h-6 ${isDarkMode ? 'text-red-400' : 'text-red-600'}`} />
+                        </div>
+                        <div className="flex-1">
+                            <h4 className="font-bold text-lg mb-1">🚫 Step 3 is Blocked</h4>
+                            <p className={`text-sm ${isDarkMode ? 'text-red-200/80' : 'text-red-700'}`}>
+                                You must open the <strong>Column Mapper</strong>, validate the data schema, and <strong>save the mapping</strong> before continuing.
+                                This ensures data quality and prevents the model from learning from incorrect or misleading columns.
+                            </p>
+                            <button
+                                onClick={() => setIsMapperOpen(true)}
+                                className={`mt-3 px-4 py-2 rounded-lg text-sm font-bold transition-all hover:scale-105 active:scale-95 ${isDarkMode
+                                    ? 'bg-red-500/20 border border-red-500/40 text-red-300 hover:bg-red-500/30'
+                                    : 'bg-red-100 border border-red-200 text-red-700 hover:bg-red-200'}`}
+                            >
+                                Open Column Mapper →
+                            </button>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* ── Upload Error Banner ── */}
+            <AnimatePresence>
+                {uploadError && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className={`p-4 rounded-xl border flex items-start gap-3 ${isDarkMode
+                            ? 'bg-red-900/20 border-red-800/50 text-red-200'
+                            : 'bg-red-50 border-red-200 text-red-700'}`}
+                    >
+                        <FileWarning className={`w-5 h-5 flex-shrink-0 mt-0.5 ${isDarkMode ? 'text-red-400' : 'text-red-600'}`} />
+                        <div>
+                            <span className="font-bold">Upload Error: </span>
+                            {uploadError}
+                        </div>
+                        <button
+                            onClick={() => setUploadError('')}
+                            className={`ml-auto shrink-0 p-1 rounded-full ${isDarkMode ? 'hover:bg-red-900/30' : 'hover:bg-red-100'}`}
+                        >
+                            <XCircle className="w-4 h-4" />
+                        </button>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 {/* Left Column */}
@@ -292,40 +454,19 @@ const DataExploration = ({ isDarkMode, onNext, onPrev, domain, onPatientCountCha
                             Target Column (What We Want to Predict)
                         </label>
                         <div className="relative">
-                            {(() => {
-                                const formatColumnName = (col) => {
-                                    const mapping = {
-                                        'DEATH_EVENT': 'Readmitted within 30 days (Yes / No)',
-                                        'diagnosis': 'Diagnosis category (Malignant / Benign)',
-                                        'Outcome': 'Clinical Outcome (Yes / No)',
-                                        'classification': 'Disease Classification (CKD / Not CKD)',
-                                        'stroke': 'Stroke occurrence (Yes / No)',
-                                        'SepsisLabel': 'Sepsis onset (Yes / No)',
-                                        'Biopsy': 'Biopsy Result (Yes / No)',
-                                        'arrhythmia': 'Arrhythmia presence (Yes / No)'
-                                    };
-                                    if (mapping[col]) return mapping[col];
-
-                                    // Fallback text formatting: "serum_sodium" -> "Serum Sodium"
-                                    return col.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-                                };
-
-                                return (
-                                    <select
-                                        value={targetColumn}
-                                        onChange={(e) => setTargetColumn(e.target.value)}
-                                        className={'w-full p-3 pr-10 rounded-lg appearance-none border outline-none focus:ring-2 focus:ring-indigo-500 ' + (isDarkMode
-                                            ? 'bg-slate-800 border-slate-600 text-white'
-                                            : 'bg-white border-slate-300 text-slate-900')}
-                                    >
-                                        {measurements.map(m => (
-                                            <option key={m.name} value={m.name}>
-                                                {formatColumnName(m.name)}
-                                            </option>
-                                        ))}
-                                    </select>
-                                );
-                            })()}
+                            <select
+                                value={targetColumn}
+                                onChange={(e) => setTargetColumn(e.target.value)}
+                                className={'w-full p-3 pr-10 rounded-lg appearance-none border outline-none focus:ring-2 focus:ring-indigo-500 ' + (isDarkMode
+                                    ? 'bg-slate-800 border-slate-600 text-white'
+                                    : 'bg-white border-slate-300 text-slate-900')}
+                            >
+                                {measurements.map(m => (
+                                    <option key={m.name} value={m.name}>
+                                        {formatColumnName(m.name)}
+                                    </option>
+                                ))}
+                            </select>
                             <div className="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-slate-500">
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
                             </div>
@@ -338,12 +479,17 @@ const DataExploration = ({ isDarkMode, onNext, onPrev, domain, onPatientCountCha
                     {/* Mapper Button */}
                     <button
                         onClick={() => setIsMapperOpen(true)}
-                        className={'w-full flex items-center justify-center gap-2 py-3 rounded-lg border font-medium transition-all ' + (isDarkMode
-                            ? 'bg-slate-800 border-slate-600 text-slate-200 hover:bg-slate-700'
-                            : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50')}
+                        className={'w-full flex items-center justify-center gap-2 py-3 rounded-lg border font-medium transition-all ' + (
+                            isMapped
+                                ? (isDarkMode ? 'bg-emerald-900/20 border-emerald-500/30 text-emerald-400 hover:bg-emerald-900/30' : 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100')
+                                : (isDarkMode ? 'bg-slate-800 border-slate-600 text-slate-200 hover:bg-slate-700' : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50')
+                        )}
                     >
-                        <Database className="w-4 h-4" />
-                        Open Column Mapper & Validate
+                        {isMapped ? (
+                            <><CheckCircle2 className="w-4 h-4" /> Schema Validated ✓</>
+                        ) : (
+                            <><Database className="w-4 h-4" /> Open Column Mapper & Validate</>
+                        )}
                     </button>
 
                     {!isMapped && (
@@ -355,6 +501,21 @@ const DataExploration = ({ isDarkMode, onNext, onPrev, domain, onPatientCountCha
                                 <span className="font-bold">Action required:</span> You must open the Column Mapper, validate the schema, and save before continuing to Step 3.
                             </div>
                         </div>
+                    )}
+
+                    {isMapped && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className={'p-4 rounded-lg flex gap-3 border ' + (isDarkMode
+                                ? 'bg-emerald-900/20 border-emerald-500/30 text-emerald-200'
+                                : 'bg-emerald-50 border-emerald-200 text-emerald-700')}
+                        >
+                            <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5 text-emerald-500" />
+                            <div className="text-sm">
+                                <span className="font-bold">Schema saved.</span> All columns validated. You may proceed to Step 3.
+                            </div>
+                        </motion.div>
                     )}
                 </div>
 
@@ -434,11 +595,10 @@ const DataExploration = ({ isDarkMode, onNext, onPrev, domain, onPatientCountCha
                     Previous
                 </button>
                 <button
-                    onClick={onNext}
-                    disabled={!isMapped}
+                    onClick={handleNextClick}
                     className={'flex items-center gap-2 px-6 py-2.5 rounded-lg font-bold shadow-lg transition-all ' + (isMapped
-                        ? 'bg-slate-900 text-white hover:bg-slate-800 hover:scale-105 active:scale-95'
-                        : 'bg-slate-200 text-slate-400 cursor-not-allowed')}
+                        ? 'bg-emerald-600 text-white hover:bg-emerald-500 hover:scale-105 active:scale-95 shadow-emerald-500/20'
+                        : isDarkMode ? 'bg-slate-700 text-slate-400 hover:bg-slate-600' : 'bg-slate-200 text-slate-400 hover:bg-slate-300')}
                 >
                     Next Step <ArrowRight className="w-4 h-4" />
                 </button>
@@ -452,6 +612,7 @@ const DataExploration = ({ isDarkMode, onNext, onPrev, domain, onPatientCountCha
                         onClose={() => setIsMapperOpen(false)}
                         onSave={handleMapperSave}
                         isDarkMode={isDarkMode}
+                        columns={mapperColumns}
                     />
                 )}
             </AnimatePresence>

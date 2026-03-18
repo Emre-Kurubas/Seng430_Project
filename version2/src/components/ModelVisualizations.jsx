@@ -23,7 +23,7 @@ const generatePoints = (count, seed) => {
 // 1. K-Nearest Neighbors (KNN)
 const KNN_CENTER = { x: 200, y: 150 };
 
-const KNNViz = ({ params }) => {
+const KNNViz = React.memo(({ params }) => {
     const { k, metric } = params.knn;
 
     // Generate seeded patients
@@ -45,7 +45,7 @@ const KNNViz = ({ params }) => {
     const maxRadius = kNearest.length > 0 ? kNearest[kNearest.length - 1].dist + 5 : 20;
 
     return (
-        <svg viewBox="0 0 400 300" className="w-full h-full">
+        <svg viewBox="0 0 400 300" className="w-full h-full" style={{ willChange: 'transform' }}>
             {/* Futuristic Grid Background */}
             <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
                 <path d="M 40 0 L 0 0 0 40" fill="none" className="stroke-indigo-500/10" strokeWidth="1" />
@@ -143,11 +143,11 @@ const KNNViz = ({ params }) => {
             </text>
         </svg>
     );
-};
+});
 
 
 // 2. Support Vector Machine (SVM)
-const SVMViz = ({ params, isDarkMode }) => {
+const SVMViz = React.memo(({ params, isDarkMode }) => {
     const { c, kernel } = params.svm;
 
     // Strictness C goes from 0.1 to 10. Margin width adjusts based on this.
@@ -155,7 +155,7 @@ const SVMViz = ({ params, isDarkMode }) => {
     const marginScale = Math.max(0.1, 1.5 / c);
 
     return (
-        <svg viewBox="0 0 600 300" className="w-full h-full">
+        <svg viewBox="0 0 600 300" className="w-full h-full" style={{ willChange: 'transform' }}>
             <defs>
                 <filter id="svm-shadow" x="-20%" y="-20%" width="140%" height="140%">
                     <feDropShadow dx="0" dy="2" stdDeviation="3" floodOpacity={0.15} />
@@ -290,11 +290,11 @@ const SVMViz = ({ params, isDarkMode }) => {
             </g>
         </svg>
     );
-};
+});
 
 
 // 3. Logistic Regression (LR)
-const LRViz = ({ params }) => {
+const LRViz = React.memo(({ params }) => {
     const { c } = params.lr;
 
     // C controls slope steepness
@@ -316,7 +316,7 @@ const LRViz = ({ params }) => {
     }, []);
 
     return (
-        <svg viewBox="0 0 400 300" className="w-full h-full">
+        <svg viewBox="0 0 400 300" className="w-full h-full" style={{ willChange: 'transform' }}>
             {/* Holographic grid */}
             <pattern id="grid-lr" width="30" height="30" patternUnits="userSpaceOnUse">
                 <path d="M 30 0 L 0 0 0 30" fill="none" className="stroke-slate-400/5 dark:stroke-slate-600/10" strokeWidth="1" />
@@ -403,11 +403,11 @@ const LRViz = ({ params }) => {
             />
         </svg>
     );
-};
+});
 
 
 // 4. Decision Tree (DT)
-const DTViz = ({ params, isDarkMode }) => {
+const DTViz = React.memo(({ params, isDarkMode }) => {
     const { maxDepth } = params.dt;
 
     const getQuestion = (level, xPos) => {
@@ -474,17 +474,17 @@ const DTViz = ({ params, isDarkMode }) => {
     };
 
     return (
-        <svg viewBox="0 0 400 300" className="w-full h-full">
+        <svg viewBox="0 0 400 300" className="w-full h-full" style={{ willChange: 'transform' }}>
             <g transform="translate(0, 40)">
                 {renderTreeLevel(1, 200, 20, 160)}
             </g>
         </svg>
     );
-};
+});
 
 
 // 5. Random Forest (RF)
-const RFViz = ({ params, isDarkMode }) => {
+const RFViz = React.memo(({ params, isDarkMode }) => {
     const { trees } = params.rf;
     const treeCount = Math.min(trees, 200);
     // Determine how many visual dots to show (max 60 to prevent lag)
@@ -509,7 +509,7 @@ const RFViz = ({ params, isDarkMode }) => {
     const finalDecision = posVotes >= negVotes ? 'pos' : 'neg';
 
     return (
-        <svg viewBox="0 0 400 300" className="w-full h-full">
+        <svg viewBox="0 0 400 300" className="w-full h-full" style={{ willChange: 'transform' }}>
             <defs>
                 <filter id="rf-glow">
                     <feGaussianBlur stdDeviation="3" result="glow" />
@@ -555,11 +555,11 @@ const RFViz = ({ params, isDarkMode }) => {
             <text x="200" y="30" textAnchor="middle" className="text-[12px] font-bold fill-slate-400 tracking-widest">{treeCount} TREES VOTING</text>
         </svg>
     );
-};
+});
 
 
 // 6. Naive Bayes (NB)
-const NBViz = ({ params }) => {
+const NBViz = React.memo(({ params }) => {
     // smoothing parameter adjusts curve fatness
     const { smoothing } = params.nb;
     // Map log scale to visual spread width 
@@ -575,7 +575,7 @@ const NBViz = ({ params }) => {
     const d2 = generateGaussian(250, 100, spread * 1.2, 150);
 
     return (
-        <svg viewBox="0 0 400 300" className="w-full h-full">
+        <svg viewBox="0 0 400 300" className="w-full h-full" style={{ willChange: 'transform' }}>
             {/* Axis */}
             <line x1="20" y1="250" x2="380" y2="250" className="stroke-slate-300 dark:stroke-slate-600" strokeWidth="2" />
 
@@ -610,7 +610,7 @@ const NBViz = ({ params }) => {
             <text x="250" y="80" textAnchor="middle" className="text-[12px] font-bold fill-rose-500">Condition B</text>
         </svg>
     );
-};
+});
 
 // --- Main Export ---
 const ModelVisualizer = React.memo(({ selectedModel, params, isDarkMode }) => {

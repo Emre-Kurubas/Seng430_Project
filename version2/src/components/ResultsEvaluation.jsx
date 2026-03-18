@@ -140,21 +140,19 @@ const useCountUp = (target, duration = 1200, delay = 0) => {
 };
 
 // ─── Metric Card ──────────────────────────────────────────────────────────────
-const MetricCard = React.memo(({ label, value, desc, concern, isDarkMode, star, delay = 0 }) => {
+const MetricCard = React.memo(({ label, value, desc, interpretation, concern, isDarkMode, star, delay = 0 }) => {
     const pct = Math.round(value * 100);
     const animatedPct = useCountUp(pct, 1200, delay * 1000 + 400);
     const warn = concern && value < concern;
     const starSvc = star;
 
-    const color = warn
-        ? 'text-red-500'
-        : value >= 0.80
-            ? 'text-emerald-500'
-            : value >= 0.70
-                ? 'text-amber-400'
-                : 'text-orange-500';
+    const color = value >= 0.80
+        ? 'text-emerald-500' // Green
+        : value >= 0.60
+            ? 'text-amber-500'  // Amber
+            : 'text-rose-500';   // Red
 
-    const barColor = warn ? 'bg-red-500' : value >= 0.80 ? 'bg-emerald-500' : value >= 0.70 ? 'bg-amber-400' : 'bg-orange-500';
+    const barColor = value >= 0.80 ? 'bg-emerald-500' : value >= 0.60 ? 'bg-amber-500' : 'bg-rose-500';
 
     return (
         <motion.div
@@ -177,7 +175,10 @@ const MetricCard = React.memo(({ label, value, desc, concern, isDarkMode, star, 
             )}
             <div className={`text-2xl font-black mb-1 metric-value-glow ${color}`}>{animatedPct}%</div>
             <div className={`text-xs font-bold uppercase tracking-wider mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>{label}</div>
-            <div className={`text-[11px] leading-tight mb-3 ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>{desc}</div>
+            <div className={`text-[11px] leading-tight mb-1 ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>{desc}</div>
+            <div className={`text-[10px] italic font-medium mb-3 ${value >= 0.8 ? 'text-emerald-600/80' : value >= 0.6 ? 'text-amber-600/80' : 'text-rose-600/80'}`}>
+                {interpretation}
+            </div>
 
             {/* Bar */}
             <div className={`h-1.5 rounded-full overflow-hidden ${isDarkMode ? 'bg-slate-700' : 'bg-slate-100'}`}>
@@ -274,7 +275,7 @@ const ResultsEvaluation = ({ isDarkMode, onNext, onPrev }) => {
         const t = setTimeout(() => {
             setResults(generateResults());
             setLoading(false);
-        }, 1200);
+        }, 400);
         return () => clearTimeout(t);
     }, []);
 
@@ -297,12 +298,12 @@ const ResultsEvaluation = ({ isDarkMode, onNext, onPrev }) => {
     const lowSensitivity = results && results.sensitivity < 0.50;
 
     const metrics = useMemo(() => results ? [
-        { label: 'Accuracy', value: results.accuracy, concern: 0.65, desc: 'Overall correct predictions out of all test patients', delay: 0.05 },
-        { label: 'Sensitivity', value: results.sensitivity, concern: 0.70, desc: 'Of patients WHO WERE readmitted, how many did the AI catch?', delay: 0.10, star: true },
-        { label: 'Specificity', value: results.specificity, concern: 0.65, desc: 'Of patients NOT readmitted, how many did the AI identify as safe?', delay: 0.15 },
-        { label: 'Precision', value: results.precision, concern: 0.60, desc: 'Of all patients the AI flagged as high-risk, how many actually were?', delay: 0.20 },
-        { label: 'F1 Score', value: results.f1Score, concern: 0.65, desc: 'Balance between Sensitivity and Precision.', delay: 0.25 },
-        { label: 'AUC-ROC', value: results.auc, concern: 0.75, desc: 'How well the model separates high-risk from low-risk patients.', delay: 0.30 },
+        { label: 'Accuracy', value: results.accuracy, concern: 0.60, desc: 'Overall correct predictions.', interpretation: 'Reliability: How often the AI is correct across all patients.', delay: 0.05 },
+        { label: 'Sensitivity', value: results.sensitivity, concern: 0.60, desc: 'Catch rate for real cases.', interpretation: 'Safety: Of patients readmitted, how many were caught?', delay: 0.10, star: true },
+        { label: 'Specificity', value: results.specificity, concern: 0.60, desc: 'Efficiency in avoiding false alarms.', interpretation: 'Accuracy in identifying healthy patients as safe.', delay: 0.15 },
+        { label: 'Precision', value: results.precision, concern: 0.60, desc: 'Confidence in flagged cases.', interpretation: 'Trust: If it flags a patient, how often is it right?', delay: 0.20 },
+        { label: 'F1 Score', value: results.f1Score, concern: 0.60, desc: 'Balanced performance measure.', interpretation: 'Utility: Balance between missing cases and false alarms.', delay: 0.25 },
+        { label: 'AUC-ROC', value: results.auc, concern: 0.60, desc: 'Discrimination ability.', interpretation: 'Power: Ability to separate high-risk from low-risk groups.', delay: 0.30 },
     ] : [], [results]);
 
     const tableRows = useMemo(() => results ? [
@@ -508,7 +509,7 @@ const ResultsEvaluation = ({ isDarkMode, onNext, onPrev }) => {
                             <div className={`mt-4 p-3 rounded-lg text-[11px] flex items-start gap-2
                                 ${results.auc >= 0.80
                                     ? isDarkMode ? 'bg-emerald-900/20 border border-emerald-500/20 text-emerald-300' : 'bg-emerald-50 border border-emerald-100 text-emerald-800'
-                                    : results.auc >= 0.75
+                                    : results.auc >= 0.60
                                         ? isDarkMode ? 'bg-amber-900/20 border border-amber-500/20 text-amber-300' : 'bg-amber-50 border border-amber-100 text-amber-800'
                                         : isDarkMode ? 'bg-red-900/20 border border-red-500/20 text-red-300' : 'bg-red-50 border border-red-100 text-red-800'
                                 }`}>
@@ -517,10 +518,15 @@ const ResultsEvaluation = ({ isDarkMode, onNext, onPrev }) => {
                                     AUC of <strong>{results.auc.toFixed(2)}</strong> — {
                                         results.auc >= 0.90 ? 'Excellent discriminative ability. The model reliably separates high-risk from low-risk patients.'
                                             : results.auc >= 0.80 ? 'Good discriminative ability. Well above random, suitable for clinical support.'
-                                                : results.auc >= 0.75 ? 'Acceptable. The model shows useful separation, but there is room for improvement.'
+                                                : results.auc >= 0.60 ? 'Acceptable. The model shows useful separation, but there is room for improvement.'
                                                     : 'Poor separation. The model may not be reliable enough for clinical decision support. Try a different algorithm.'
                                     }
                                 </span>
+                            </div>
+                            
+                            {/* Explanatory note below chart */}
+                            <div className={`mt-3 p-3 rounded-lg text-[10px] leading-relaxed border ${isDarkMode ? 'bg-slate-900/40 border-slate-700/50 text-slate-500' : 'bg-slate-50 border-slate-200 text-slate-500'}`}>
+                                <p><strong>Note:</strong> The ROC (Receiver Operating Characteristic) curve plots Sensitivity against (1-Specificity). A perfect "omniscient" model would be a right angle at the top-left (AUC=1.0). The closer the blue curve is to that corner, the better the AI is at distinguishing between patients who will be readmitted and those who won't.</p>
                             </div>
 
                             {/* Legend */}

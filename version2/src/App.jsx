@@ -83,7 +83,7 @@ function App() {
   const toggleTheme = () => setIsDarkMode(d => !d);
 
   useEffect(() => {
-    setTimeout(() => setIsLoaded(true), 300);
+    setIsLoaded(true);
   }, []);
 
   // Save progress to localStorage
