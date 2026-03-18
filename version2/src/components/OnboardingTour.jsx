@@ -288,10 +288,12 @@ const OnboardingTour = ({ isDarkMode }) => {
     const [targetRect, setTargetRect] = useState(null);
     const [ready, setReady] = useState(false);
 
-    // Check localStorage on mount — only show if never seen before
+    // Check localStorage on mount — only show if never seen before AND NOT on mobile
     useEffect(() => {
         const seen = localStorage.getItem(TOUR_KEY);
-        if (!seen) {
+        const isMobile = window.innerWidth < 1024; // Most tablets/phones have issues with absolute-positioned tours
+
+        if (!seen && !isMobile) {
             // Small delay so the page renders first
             const t = setTimeout(() => setVisible(true), 1400);
             return () => clearTimeout(t);
