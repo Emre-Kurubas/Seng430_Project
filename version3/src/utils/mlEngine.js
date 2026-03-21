@@ -1,130 +1,39 @@
-import KNN from 'ml-knn';
-import { DecisionTreeClassifier } from 'ml-cart';
-import { RandomForestClassifier } from 'ml-random-forest';
-import { GaussianNB } from 'ml-naivebayes';
-import LogisticRegression from 'ml-logistic-regression';
-import { Matrix } from 'ml-matrix';
+/**
+ * ML Engine — Frontend API Client
+ * 
+ * All heavy ML training now happens on the backend server.
+ * This module sends the dataset + parameters via fetch()
+ * and returns the computed metrics.
+ */
 
-// Prepares dataset for ML
-export function prepareData(dataset, datasetSchema, targetColumn) {
-    if (!dataset || dataset.length === 0 || !targetColumn) return { X: [], y: [] };
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-    // Find feature columns (Numeric)
-    const featureCols = datasetSchema
-        .filter(c => c.role === 'Number (measurement)' || c.role === 'Category')
-        .map(c => c.name);
-
-    if (featureCols.length === 0) return { X: [], y: [] };
-
-    const X = [];
-    const y = [];
-    
-    // Map Target labels to 0 and 1
-    const targetValues = [...new Set(dataset.map(row => row[targetColumn]).filter(v => v !== undefined && v !== ''))];
-    const targetMap = {};
-    if (targetValues.length >= 2) {
-        targetMap[targetValues[0]] = 0;
-        targetMap[targetValues[1]] = 1;
-    } else {
-        targetMap[targetValues[0] || '1'] = 1;
-    }
-
-    dataset.forEach(row => {
-        const rowFeatures = featureCols.map(col => {
-            const val = Number(row[col]);
-            return isNaN(val) ? 0 : val;
-        });
-        
-        let targetVal = targetMap[row[targetColumn]];
-        if (targetVal === undefined) targetVal = 0;
-
-        X.push(rowFeatures);
-        y.push(targetVal);
+/**
+ * Sends training request to the backend server
+ * @param {string} modelId - Model identifier (knn, dt, rf, nb, lr, svm)
+ * @param {object} params - Model hyperparameters
+ * @param {Array} dataset - Parsed CSV data rows
+ * @param {Array} datasetSchema - Column schema from ColumnMapper
+ * @param {string} targetColumn - Name of the target column
+ * @returns {Promise<object>} - Evaluation metrics { accuracy, sensitivity, specificity, precision, f1Score, auc, tp, tn, fp, fn, totalTest }
+ */
+export async function runMLTraining(modelId, params, dataset, datasetSchema, targetColumn) {
+    const response = await fetch(`${API_BASE_URL}/api/train`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ modelId, params, dataset, datasetSchema, targetColumn })
     });
 
-    return { X, y, targetMap };
-}
-
-// Splits dataset into train and test
-export function trainTestSplit(X, y, testRatio = 0.2) {
-    const splitIndex = Math.floor(X.length * (1 - testRatio));
-    return {
-        XTrain: X.slice(0, splitIndex),
-        yTrain: y.slice(0, splitIndex),
-        XTest: X.slice(splitIndex),
-        yTest: y.slice(splitIndex)
-    };
-}
-
-// Calculates Evaluation Metrics
-export function calculateMetrics(yTrue, yPred) {
-    let tp = 0, tn = 0, fp = 0, fn = 0;
-    for (let i = 0; i < yTrue.length; i++) {
-        if (yTrue[i] === 1 && yPred[i] === 1) tp++;
-        else if (yTrue[i] === 0 && yPred[i] === 0) tn++;
-        else if (yTrue[i] === 0 && yPred[i] === 1) fp++;
-        else if (yTrue[i] === 1 && yPred[i] === 0) fn++;
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Server error (${response.status})`);
     }
 
-    const accuracy = (tp + tn) / (yTrue.length || 1);
-    const sensitivity = tp / ((tp + fn) || 1);
-    const specificity = tn / ((tn + fp) || 1);
-    const precision = tp / ((tp + fp) || 1);
-    const precisionValue = (tp + fp === 0) ? 0 : precision;
-    const f1Score = (sensitivity + precisionValue === 0) ? 0 : 2 * ((sensitivity * precisionValue) / (sensitivity + precisionValue));
-    
-    // Simple mock AUC for pure JS (since full ROC-AUC requires probabilities)
-    const auc = (sensitivity + specificity) / 2;
+    const result = await response.json();
 
-    return { 
-        accuracy: parseFloat(accuracy.toFixed(3)), 
-        sensitivity: parseFloat(sensitivity.toFixed(3)), 
-        specificity: parseFloat(specificity.toFixed(3)),
-        precision: parseFloat(precisionValue.toFixed(3)),
-        f1Score: parseFloat(f1Score.toFixed(3)),
-        auc: parseFloat(auc.toFixed(3)),
-        tp, tn, fp, fn,
-        totalTest: yTrue.length
-    };
-}
-
-// Trains the given model via ml.js
-export async function runMLTraining(modelId, params, dataset, datasetSchema, targetColumn) {
-    const { X, y } = prepareData(dataset, datasetSchema, targetColumn);
-    if (X.length === 0) throw new Error("No data prepared");
-
-    const { XTrain, yTrain, XTest, yTest } = trainTestSplit(X, y, 0.2);
-    
-    let yPred = [];
-    
-    try {
-        if (modelId === 'knn') {
-            const knn = new KNN(XTrain, yTrain, { k: params.k || 5 });
-            yPred = knn.predict(XTest);
-        } else if (modelId === 'dt') {
-            const dt = new DecisionTreeClassifier({ maxDepth: params.maxDepth || 3 });
-            dt.train(XTrain, yTrain);
-            yPred = dt.predict(XTest);
-        } else if (modelId === 'rf') {
-            const rf = new RandomForestClassifier({ nEstimators: params.trees || 20, maxFeatures: 1.0 });
-            rf.train(XTrain, yTrain);
-            yPred = rf.predict(XTest);
-        } else if (modelId === 'nb') {
-            const nb = new GaussianNB();
-            nb.train(XTrain, yTrain);
-            yPred = nb.predict(XTest);
-        } else if (modelId === 'lr') {
-            const lr = new LogisticRegression({ numSteps: 100, learningRate: 0.05 });
-            lr.train(new Matrix(XTrain), Matrix.columnVector(yTrain));
-            yPred = lr.predict(new Matrix(XTest));
-        } else {
-            // Fallback mock (e.g. SVM if libsvm not ready)
-            yPred = yTest.map(trueY => (Math.random() < 0.75 ? trueY : (trueY === 1 ? 0 : 1)));
-        }
-    } catch (err) {
-        console.error("ML Training error:", err);
-        yPred = yTest.map((val) => val); // Fallback perfect predictor on crash to avoid breaking UI strictly
+    if (!result.success) {
+        throw new Error(result.error || 'Training failed');
     }
 
-    return calculateMetrics(yTest, yPred);
+    return result.metrics;
 }

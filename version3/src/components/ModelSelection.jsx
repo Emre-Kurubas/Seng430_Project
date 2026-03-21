@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 // eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from 'framer-motion';
-import { Settings, Play, Plus, Activity, GitBranch, Binary, Network, TrendingUp, Info, CheckCircle2, ArrowRight, HelpCircle } from 'lucide-react';
+import { Settings, Play, Plus, Activity, GitBranch, Binary, Network, TrendingUp, Info, CheckCircle2, ArrowRight, HelpCircle, AlertCircle } from 'lucide-react';
 import ModelVisualizer from './ModelVisualizations';
 import Tooltip from './Tooltip';
 import { runMLTraining } from '../utils/mlEngine';
@@ -89,6 +89,7 @@ const ModelSelection = ({ isDarkMode, onNext, onPrev, dataset, datasetSchema, ta
     const [isInitialLoading, setIsInitialLoading] = useState(true);
     const [comparisonList, setComparisonList] = useState([]);
     const [lastResult, setLastResult] = useState(null);
+    const [trainingError, setTrainingError] = useState(null);
 
     // Model Configurations & State
     const [params, setParams] = useState({
@@ -113,7 +114,8 @@ const ModelSelection = ({ isDarkMode, onNext, onPrev, dataset, datasetSchema, ta
 
     const trainModel = async () => {
         setIsTraining(true);
-        // Force React to render the loading state before synchronous ML code blocks the thread!
+        setTrainingError(null);
+        // Force React to render the loading state before async call
         await new Promise(resolve => setTimeout(resolve, 50));
         
         if (!dataset || dataset.length === 0) {
@@ -156,6 +158,11 @@ const ModelSelection = ({ isDarkMode, onNext, onPrev, dataset, datasetSchema, ta
             }
         } catch (err) {
             console.error(err);
+            if (err instanceof TypeError || err.message.includes('fetch')) {
+                setTrainingError('Cannot reach the ML server. Make sure the backend is running.');
+            } else {
+                setTrainingError(err.message || 'Training failed. Please try again.');
+            }
         } finally {
             setIsTraining(false);
             if (isInitialLoading) setIsInitialLoading(false);
@@ -261,6 +268,24 @@ const ModelSelection = ({ isDarkMode, onNext, onPrev, dataset, datasetSchema, ta
                     Choose a machine learning algorithm, adjust its settings, and train it on your patient data. Try different models and compare their accuracy side by side.
                 </p>
             </div>
+
+            {/* ── Backend Error Banner ── */}
+            {trainingError && (
+                <div className={`p-4 rounded-xl border flex items-start gap-3 ${isDarkMode
+                    ? 'bg-red-900/20 border-red-800/50 text-red-200'
+                    : 'bg-red-50 border-red-200 text-red-700'}`}>
+                    <AlertCircle className={`w-5 h-5 flex-shrink-0 mt-0.5 ${isDarkMode ? 'text-red-400' : 'text-red-600'}`} />
+                    <div className="flex-1">
+                        <span className="font-bold">Training Error: </span>{trainingError}
+                    </div>
+                    <button onClick={() => { setTrainingError(null); trainModel(); }}
+                        className={`shrink-0 px-3 py-1 rounded-lg text-xs font-bold transition-all ${isDarkMode
+                            ? 'bg-red-500/20 text-red-300 hover:bg-red-500/30'
+                            : 'bg-red-100 text-red-700 hover:bg-red-200'}`}>
+                        Retry
+                    </button>
+                </div>
+            )}
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 {/* Left Col: Model Selection & Params */}

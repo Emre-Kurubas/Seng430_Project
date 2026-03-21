@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: medical-ml-backend
+    runtime: node
+    region: oregon
+    rootDir: server
+    buildCommand: npm install
+    startCommand: node index.js
+    plan: free
+    envVars:
+      - key: NODE_ENV
+        value: production
