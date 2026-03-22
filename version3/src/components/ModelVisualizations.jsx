@@ -95,7 +95,7 @@ const getFeatureNames = (schema) => {
 ═══════════════════════════════════════════════════════════════ */
 const KNNViz = React.memo(({ params, datasetSchema, targetColumn, primaryStr, secondaryStr }) => {
     const canvasRef = useRef(null);
-    const k = params.knn.k;
+    const rawK = params.knn.k;
     const fNames = getFeatureNames(datasetSchema);
     const tName = targetColumn || 'Outcome';
 
@@ -105,6 +105,9 @@ const KNNViz = React.memo(({ params, datasetSchema, targetColumn, primaryStr, se
         [0.75, 0.3, 0], [0.8, 0.65, 1], [0.35, 0.2, 0], [0.6, 0.8, 1], [0.85, 0.4, 0],
         [0.1, 0.45, 1], [0.9, 0.7, 1], [0.6, 0.15, 0], [0.28, 0.42, 0], [0.52, 0.48, 1],
     ], []);
+
+    // Clamp K to the number of available visualization points to prevent crashes
+    const k = Math.min(rawK, pts.length);
 
     const newPt = useMemo(() => [0.48, 0.52], []);
 
@@ -119,7 +122,7 @@ const KNNViz = React.memo(({ params, datasetSchema, targetColumn, primaryStr, se
         }));
         dists.sort((a, b) => a.dist - b.dist);
         const neighbors = new Set(dists.slice(0, k).map(d => d.i));
-        const kRadius = dists[k - 1].dist;
+        const kRadius = k > 0 ? dists[k - 1].dist : 0;
 
         // Draw K-radius circle
         ctx.beginPath();
