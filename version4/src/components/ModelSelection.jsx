@@ -181,7 +181,7 @@ const ModelSelection = ({ isDarkMode, onNext, onPrev, dataset, datasetSchema, ta
             // Ignore AbortError — it means we cancelled intentionally
             if (err.name === 'AbortError' || err.message?.includes('aborted')) return;
             console.error(err);
-            if (err instanceof TypeError || err.message.includes('fetch')) {
+            if (err instanceof TypeError || err.message?.includes('fetch')) {
                 setTrainingError('Cannot reach the ML server. Make sure the backend is running.');
             } else {
                 setTrainingError(err.message || 'Training failed. Please try again.');

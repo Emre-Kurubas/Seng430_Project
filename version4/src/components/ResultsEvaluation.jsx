@@ -80,7 +80,7 @@ const ROCCurve = React.memo(({ auc, isDarkMode, primaryStr }) => {
             <rect x={w - pad - 58} y={pad + 6} width="62" height="20" rx="4" fill={curveColor} fillOpacity="0.2" />
             <text x={w - pad - 27} y={pad + 19}
                 textAnchor="middle" fontSize="10" fontWeight="700" fill={curveColor}>
-                AUC = {auc.toFixed(2)}
+                AUC = {(auc ?? 0).toFixed(2)}
             </text>
 
             {/* Corner labels */}
@@ -507,7 +507,7 @@ const ResultsEvaluation = ({ isDarkMode, onNext, onPrev, trainedModelResult, dom
                                 }`}>
                                 <CheckCircle2 className="w-3.5 h-3.5 shrink-0 mt-0.5" />
                                 <span>
-                                    AUC of <strong>{results.auc.toFixed(2)}</strong> — {
+                                    AUC of <strong>{(results.auc ?? 0).toFixed(2)}</strong> — {
                                         results.auc >= 0.90 ? 'Excellent discriminative ability. The model reliably separates high-risk from low-risk patients.'
                                             : results.auc >= 0.80 ? 'Good discriminative ability. Well above random, suitable for clinical support.'
                                                 : results.auc >= 0.60 ? 'Acceptable. The model shows useful separation, but there is room for improvement.'

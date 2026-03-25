@@ -5,6 +5,7 @@ import DomainSelector from './components/DomainSelector';
 import ClinicalContext from './components/ClinicalContext';
 import DataExploration from './components/DataExploration';
 import DataPreparation from './components/DataPreparation';
+import ErrorBoundary from './components/ErrorBoundary';
 import { specialties } from './data/specialties';
 // eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from 'framer-motion';
@@ -288,37 +289,51 @@ function App() {
                     <AnimatePresence mode="wait">
                       {currentStep === 1 && (
                         <motion.div key={`s1-${selectedDomain.id}`} variants={pageVariants} initial="initial" animate="animate" exit="exit" transition={pageTransition}>
-                          <ClinicalContext domain={selectedDomain} {...sharedProps} />
+                          <ErrorBoundary isDarkMode={isDarkMode} label="Clinical Context">
+                            <ClinicalContext domain={selectedDomain} {...sharedProps} />
+                          </ErrorBoundary>
                         </motion.div>
                       )}
                       {currentStep === 2 && (
                         <motion.div key="s2" variants={pageVariants} initial="initial" animate="animate" exit="exit" transition={pageTransition}>
-                          <DataExploration {...sharedProps} domain={selectedDomain} onPatientCountChange={setPatientCount} />
+                          <ErrorBoundary isDarkMode={isDarkMode} label="Data Exploration">
+                            <DataExploration {...sharedProps} domain={selectedDomain} onPatientCountChange={setPatientCount} />
+                          </ErrorBoundary>
                         </motion.div>
                       )}
                       {currentStep === 3 && (
                         <motion.div key="s3" variants={pageVariants} initial="initial" animate="animate" exit="exit" transition={pageTransition}>
-                          <DataPreparation {...sharedProps} domain={selectedDomain} patientCount={patientCount} />
+                          <ErrorBoundary isDarkMode={isDarkMode} label="Data Preparation">
+                            <DataPreparation {...sharedProps} domain={selectedDomain} patientCount={patientCount} />
+                          </ErrorBoundary>
                         </motion.div>
                       )}
                       {currentStep === 4 && (
                         <motion.div key="s4" variants={pageVariants} initial="initial" animate="animate" exit="exit" transition={pageTransition}>
-                          <ModelSelection {...sharedProps} domain={selectedDomain} />
+                          <ErrorBoundary isDarkMode={isDarkMode} label="Model Selection & Training">
+                            <ModelSelection {...sharedProps} domain={selectedDomain} />
+                          </ErrorBoundary>
                         </motion.div>
                       )}
                       {currentStep === 5 && (
                         <motion.div key="s5" variants={pageVariants} initial="initial" animate="animate" exit="exit" transition={pageTransition}>
-                          <ResultsEvaluation {...sharedProps} domain={selectedDomain} />
+                          <ErrorBoundary isDarkMode={isDarkMode} label="Results Evaluation">
+                            <ResultsEvaluation {...sharedProps} domain={selectedDomain} />
+                          </ErrorBoundary>
                         </motion.div>
                       )}
                       {currentStep === 6 && (
                         <motion.div key="s6" variants={pageVariants} initial="initial" animate="animate" exit="exit" transition={pageTransition}>
-                          <Explainability {...sharedProps} domain={selectedDomain} />
+                          <ErrorBoundary isDarkMode={isDarkMode} label="Explainability">
+                            <Explainability {...sharedProps} domain={selectedDomain} />
+                          </ErrorBoundary>
                         </motion.div>
                       )}
                       {currentStep === 7 && (
                         <motion.div key="s7" variants={pageVariants} initial="initial" animate="animate" exit="exit" transition={pageTransition}>
-                          <EthicsBias {...sharedProps} domain={selectedDomain} />
+                          <ErrorBoundary isDarkMode={isDarkMode} label="Ethics & Bias">
+                            <EthicsBias {...sharedProps} domain={selectedDomain} />
+                          </ErrorBoundary>
                         </motion.div>
                       )}
                     </AnimatePresence>

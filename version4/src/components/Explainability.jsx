@@ -739,7 +739,8 @@ const Explainability = ({ isDarkMode, onNext, onPrev, domain, dataset, datasetSc
 
                                     <div className="space-y-2">
                                         {(() => {
-                                            const maxAbs = Math.max(...patientData.contributions.map(x => Math.abs(x.contribution)));
+                                            const absVals = patientData.contributions.map(x => Math.abs(x.contribution));
+                                            const maxAbs = absVals.length > 0 ? Math.max(...absVals) : 1;
                                             return patientData.contributions.map((c, i) => (
                                                 <WaterfallBar
                                                     key={c.id}
