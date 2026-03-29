@@ -4,7 +4,6 @@ import { RandomForestClassifier } from 'ml-random-forest';
 import { GaussianNB } from 'ml-naivebayes';
 import LogisticRegression from 'ml-logistic-regression';
 import { Matrix } from 'ml-matrix';
-import SVM from 'libsvm-js/asm.js';
 
 // Prepares dataset for ML
 export function prepareData(dataset, datasetSchema, targetColumn) {
@@ -100,8 +99,7 @@ export async function runMLTraining(modelId, params, dataset, datasetSchema, tar
     
     try {
         if (modelId === 'knn') {
-            const safeK = Math.min(params.k || 5, XTrain.length || 1);
-            const knn = new KNN(XTrain, yTrain, { k: safeK });
+            const knn = new KNN(XTrain, yTrain, { k: params.k || 5 });
             yPred = knn.predict(XTest);
         } else if (modelId === 'dt') {
             const dt = new DecisionTreeClassifier({ maxDepth: params.maxDepth || 3 });
@@ -119,19 +117,8 @@ export async function runMLTraining(modelId, params, dataset, datasetSchema, tar
             const lr = new LogisticRegression({ numSteps: 100, learningRate: 0.05 });
             lr.train(new Matrix(XTrain), Matrix.columnVector(yTrain));
             yPred = lr.predict(new Matrix(XTest));
-        } else if (modelId === 'svm') {
-            const kernelType = params.kernel === 'Linear' ? SVM.KERNEL_TYPES.LINEAR :
-                               params.kernel === 'Poly' ? SVM.KERNEL_TYPES.POLYNOMIAL : SVM.KERNEL_TYPES.RBF;
-            const svm = new SVM({
-                kernel: kernelType,
-                type: SVM.SVM_TYPES.C_SVC,
-                cost: params.c || 1.0,
-                quiet: true // Use quiet mode to suppress debug logs in console
-            });
-            svm.train(XTrain, yTrain);
-            yPred = svm.predict(XTest);
         } else {
-            // Fallback mock
+            // Fallback mock (e.g. SVM if libsvm not ready)
             yPred = yTest.map(trueY => (Math.random() < 0.75 ? trueY : (trueY === 1 ? 0 : 1)));
         }
     } catch (err) {

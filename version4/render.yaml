@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: medical-ml-backend
+    runtime: node
+    region: oregon
+    rootDir: server
+    buildCommand: npm install
+    # H5: cap Node heap to avoid OOM on free-tier (512MB RAM)
+    startCommand: node --max-old-space-size=400 index.js
+    plan: free
+    # L1: native health check so Render knows when the process is up/crashed
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # C2: only this frontend origin can call the backend
+      - key: ALLOWED_ORIGIN
+        value: https://seng430-project-5kbd.onrender.com
