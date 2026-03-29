@@ -11,6 +11,7 @@ const { Matrix } = require('ml-matrix');
 
 /**
  * Prepares a raw dataset for ML training by extracting numeric features and encoding the binary target column.
+ * Category columns are label-encoded (each unique string → a unique integer).
  * @param {Array<Object>} dataset - Array of row objects from the uploaded CSV
  * @param {Array<Object>} datasetSchema - Column schema array (each with `name` and `role`)
  * @param {string} targetColumn - Name of the column containing the prediction target
@@ -19,12 +20,26 @@ const { Matrix } = require('ml-matrix');
 function prepareData(dataset, datasetSchema, targetColumn) {
     if (!dataset || dataset.length === 0 || !targetColumn) return { X: [], y: [] };
 
-    // Find feature columns (Numeric)
+    // Find feature columns (Numeric + Category)
     const featureCols = datasetSchema
         .filter(c => c.role === 'Number (measurement)' || c.role === 'Category')
         .map(c => c.name);
 
+    // Identify which columns are Category so we can label-encode them
+    const categoryCols = new Set(
+        datasetSchema.filter(c => c.role === 'Category').map(c => c.name)
+    );
+
     if (featureCols.length === 0) return { X: [], y: [] };
+
+    // Build label-encoding maps for every category column
+    const labelMaps = {};
+    for (const col of categoryCols) {
+        const uniqueVals = [...new Set(dataset.map(row => row[col]).filter(v => v !== undefined && v !== ''))];
+        const map = {};
+        uniqueVals.forEach((val, idx) => { map[val] = idx; });
+        labelMaps[col] = map;
+    }
 
     const X = [];
     const y = [];
@@ -41,6 +56,11 @@ function prepareData(dataset, datasetSchema, targetColumn) {
 
     dataset.forEach(row => {
         const rowFeatures = featureCols.map(col => {
+            if (categoryCols.has(col)) {
+                // Label-encode: map string value to its integer index
+                const encoded = labelMaps[col][row[col]];
+                return encoded !== undefined ? encoded : 0;
+            }
             const val = Number(row[col]);
             return isNaN(val) ? 0 : val;
         });
@@ -57,13 +77,19 @@ function prepareData(dataset, datasetSchema, targetColumn) {
 
 /**
  * Splits feature matrix and label vector into training and test sets.
+ * Guarantees at least 1 sample in each set when there are ≥ 2 rows.
  * @param {number[][]} X - Full feature matrix
  * @param {number[]} y - Full label vector
  * @param {number} [testRatio=0.2] - Fraction of data reserved for testing (0–1)
  * @returns {{ XTrain: number[][], yTrain: number[], XTest: number[][], yTest: number[] }}
  */
 function trainTestSplit(X, y, testRatio = 0.2) {
-    const splitIndex = Math.floor(X.length * (1 - testRatio));
+    let splitIndex = Math.floor(X.length * (1 - testRatio));
+
+    // Guard: ensure at least 1 sample in both train and test sets
+    if (splitIndex <= 0) splitIndex = 1;
+    if (splitIndex >= X.length) splitIndex = X.length - 1;
+
     return {
         XTrain: X.slice(0, splitIndex),
         yTrain: y.slice(0, splitIndex),
@@ -126,13 +152,23 @@ async function runMLTraining(modelId, params, dataset, datasetSchema, targetColu
     const { X, y } = prepareData(dataset, datasetSchema, targetColumn);
     if (X.length === 0) throw new Error("No data prepared");
 
+    // Need at least 2 rows for train/test split
+    if (X.length < 2) throw new Error("Dataset too small — need at least 2 rows");
+
     const { XTrain, yTrain, XTest, yTest } = trainTestSplit(X, y, 0.2);
+
+    // Safety check — should never happen after the guards above
+    if (XTrain.length === 0 || XTest.length === 0) {
+        throw new Error("Train/test split produced empty set — add more data");
+    }
 
     let yPred = [];
 
     try {
         if (modelId === 'knn') {
-            const safeK = Math.min(params.k || 5, XTrain.length || 1);
+            // Clamp k so it never exceeds the training set size
+            const safeK = Math.min(params.k || 5, XTrain.length);
+            console.log(`[KNN] k=${params.k} → safeK=${safeK}, trainSize=${XTrain.length}, testSize=${XTest.length}`);
             const knn = new KNN(XTrain, yTrain, { k: safeK });
             yPred = knn.predict(XTest);
         } else if (modelId === 'dt') {
@@ -168,7 +204,8 @@ async function runMLTraining(modelId, params, dataset, datasetSchema, targetColu
         }
     } catch (err) {
         console.error("ML Training error:", err);
-        yPred = yTest.map((val) => val); // Fallback perfect predictor on crash
+        // Honest fallback: random predictor instead of a fake perfect score
+        yPred = yTest.map(() => (Math.random() < 0.5 ? 1 : 0));
     }
 
     return calculateMetrics(yTest, yPred);

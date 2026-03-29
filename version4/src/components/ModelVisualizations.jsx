@@ -119,8 +119,9 @@ const KNNViz = React.memo(({ params, datasetSchema, targetColumn, primaryStr, se
             i, dist: Math.hypot(px - newPt[0], py - newPt[1]), c
         }));
         dists.sort((a, b) => a.dist - b.dist);
-        const neighbors = new Set(dists.slice(0, k).map(d => d.i));
-        const kRadius = dists[k - 1].dist;
+        const safeK = Math.min(k, dists.length);
+        const neighbors = new Set(dists.slice(0, safeK).map(d => d.i));
+        const kRadius = safeK > 0 ? dists[safeK - 1].dist : 0;
 
         // Draw K-radius circle
         ctx.beginPath();
@@ -201,10 +202,11 @@ const KNNViz = React.memo(({ params, datasetSchema, targetColumn, primaryStr, se
             i, dist: Math.hypot(px - newPt[0], py - newPt[1]), c
         }));
         dists.sort((a, b) => a.dist - b.dist);
-        const nearest = dists.slice(0, k);
+        const safeK = Math.min(k, dists.length) || 1;
+        const nearest = dists.slice(0, safeK);
         const readmitted = nearest.filter(d => d.c === 1).length;
-        const safe = k - readmitted;
-        const pct = Math.round((readmitted / k) * 100);
+        const safe = safeK - readmitted;
+        const pct = Math.round((readmitted / safeK) * 100);
         return { readmitted, safe, pct };
     }, [k, pts, newPt]);
 
