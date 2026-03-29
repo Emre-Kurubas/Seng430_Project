@@ -73,9 +73,9 @@ Each step includes educational content, interactive components, and clinical con
 │  ② Data Exploration  →  Upload CSV, inspect features & statistics   │
 │  ③ Data Preparation  →  Normalize, encode, handle missing values    │
 │  ④ Model Selection   →  Choose & train ML model with live params    │
-│  ⑤ Results           →  Confusion matrix, ROC, 6 key metrics       │
+│  ⑤ Results           →  Confusion matrix, ROC, 6 key metrics        │
 │  ⑥ Explainability    →  Feature importance & SHAP-like analysis     │
-│  ⑦ Ethics & Bias     →  Fairness audit, subgroup analysis, cert    │
+│  ⑦ Ethics & Bias     →  Fairness audit, subgroup analysis, cert     │
 │                                                                     │
 └─────────────────────────────────────────────────────────────────────┘
 ```
@@ -181,20 +181,20 @@ The platform covers **20 real-world medical specialties**, each with a unique cl
 ```
 ┌────────────────────────────────────────────────────────────────────┐
 │                        FRONTEND (React 19)                         │
-│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌─────────┐ │
-│  │  Vite 7  │ │Tailwind 4│ │  Framer  │ │ Three.js │ │ Lucide  │ │
-│  │  (build) │ │  (style) │ │  Motion  │ │   (3D)   │ │ (icons) │ │
-│  └──────────┘ └──────────┘ └──────────┘ └──────────┘ └─────────┘ │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌─────────┐   │
+│  │  Vite 7  │ │Tailwind 4│ │  Framer  │ │ Three.js │ │ Lucide  │   │
+│  │  (build) │ │  (style) │ │  Motion  │ │   (3D)   │ │ (icons) │   │
+│  └──────────┘ └──────────┘ └──────────┘ └──────────┘ └─────────┘   │
 │                                                                    │
 │  20 Components · ErrorBoundary · Lazy Loading · Dark/Light Mode    │
 ├──────────────────────── fetch() ──────────────────────────────────┤
 │                       BACKEND (Node.js)                            │
 │  ┌──────────┐ ┌──────────────────────────────────────────────────┐ │
 │  │ Express  │ │              ML ENGINE (mlEngine.js)             │ │
-│  │  Server  │ │  ┌─────┐ ┌─────┐ ┌────┐ ┌────┐ ┌────┐ ┌─────┐ │ │
-│  │  CORS    │ │  │ KNN │ │ SVM │ │ DT │ │ RF │ │ LR │ │ NB  │ │ │
-│  │  (3001)  │ │  └─────┘ └─────┘ └────┘ └────┘ └────┘ └─────┘ │ │
-│  └──────────┘ │  Label Encoding · k-Clamping · Error Recovery   │ │
+│  │  Server  │ │  ┌─────┐ ┌─────┐ ┌────┐ ┌────┐ ┌────┐ ┌─────┐    │ │
+│  │  CORS    │ │  │ KNN │ │ SVM │ │ DT │ │ RF │ │ LR │ │ NB  │    │ │
+│  │  (3001)  │ │  └─────┘ └─────┘ └────┘ └────┘ └────┘ └─────┘    │ │
+│  └──────────┘ │  Label Encoding · k-Clamping · Error Recovery    │ │
 │               └──────────────────────────────────────────────────┘ │
 ├────────────────────────────────────────────────────────────────────┤
 │                     DEPLOYMENT (AWS)                               │
