@@ -187,7 +187,7 @@ The platform covers **20 real-world medical specialties**, each with a unique cl
 │  └──────────┘ └──────────┘ └──────────┘ └──────────┘ └─────────┘   │
 │                                                                    │
 │  20 Components · ErrorBoundary · Lazy Loading · Dark/Light Mode    │
-├──────────────────────── fetch() ──────────────────────────────────┤
+├──────────────────────── fetch() ───────────────────────────────────┤
 │                       BACKEND (Node.js)                            │
 │  ┌──────────┐ ┌──────────────────────────────────────────────────┐ │
 │  │ Express  │ │              ML ENGINE (mlEngine.js)             │ │
