@@ -5,7 +5,7 @@
 <br>
 
 <h3>🌐 Try the Live Interactive Demo</h3>
-<a href="https://seng430-project-5kbd.onrender.com">
+<a href="http://seng-430-course.s3-website.eu-central-1.amazonaws.com/">
 <img src="https://img.shields.io/badge/🚀%20Launch%20Live%20Demo-22c55e?style=for-the-badge&logo=vercel&logoColor=white" alt="Launch Live Demo" />
 </a>
 
