@@ -19,7 +19,7 @@ const SPECIALTIES = [
     { n: 6, name: 'Endocrinology — Diabetes', predicts: 'Diabetes onset within 5 years from metabolic markers', source: 'Pima Indians Diabetes Dataset', target: 'Outcome (0/1)' },
     { n: 7, name: 'Hepatology — Liver', predicts: 'Liver disease from blood test results', source: 'Indian Liver Patient Dataset', target: 'Dataset (liver disease y/n)' },
     { n: 8, name: 'Cardiology — Stroke', predicts: 'Stroke risk from demographics and comorbidities', source: 'Kaggle Stroke Prediction Dataset', target: 'stroke (0/1)' },
-    { n: 9, name: 'Mental Health', predicts: 'Depression severity from PHQ-9 survey responses', source: 'Kaggle Depression/Anxiety Dataset', target: 'severity class' },
+    { n: 9, name: 'Mental Health', predicts: 'Depression risk from student lifestyle and academic factors', source: 'Kaggle Student Depression Dataset', target: 'Depression (0/1)' },
     { n: 10, name: 'Pulmonology — COPD', predicts: 'COPD exacerbation risk from spirometry data', source: 'Kaggle / PhysioNet COPD Dataset', target: 'exacerbation (y/n)' },
     { n: 11, name: 'Haematology — Anaemia', predicts: 'Type of anaemia from full blood count results', source: 'Kaggle Anaemia Classification Dataset', target: 'anemia_type (multi-class)' },
     { n: 12, name: 'Dermatology', predicts: 'Benign vs. malignant skin lesion from dermoscopy features', source: 'HAM10000 metadata (Kaggle)', target: 'dx_type (benign / malignant)' },

@@ -162,11 +162,11 @@ export const specialties = [
     {
         id: 9,
         name: 'Mental Health',
-        description: 'Depression severity from PHQ-9 survey responses',
-        source: 'Kaggle Depression/Anxiety Dataset',
-        target: 'severity class',
-        clinicalQuestion: 'What is the severity level of depression indicated by the patient\'s survey responses?',
-        whyMatters: 'Objective severity assessment helps clinicians tailor treatment plans—distinguishing between patients who may need immediate intervention versus those suitable for monitoring.',
+        description: 'Depression risk prediction from student lifestyle and academic factors',
+        source: 'Kaggle Student Depression Dataset',
+        target: 'Depression (0/1)',
+        clinicalQuestion: 'Is this student at risk of depression based on their academic, lifestyle, and demographic factors?',
+        whyMatters: 'Early identification of depression risk in students allows for timely counselling interventions, academic support adjustments, and mental health resource allocation — potentially preventing crises.',
         icon: 'Brain',
         theme: {
             primary: '#6366F1', // indigo-500

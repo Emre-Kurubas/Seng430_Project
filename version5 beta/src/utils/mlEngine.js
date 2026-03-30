@@ -18,6 +18,18 @@ export function stratifiedSample(dataset, targetColumn, maxRows) {
         groups[cls].push(row);
     });
 
+    // If there are too many unique values (e.g. continuous regression target or identifier)
+    // stratified sampling is inappropriate and will return the entire dataset.
+    // Fallback to simple random sampling.
+    if (Object.keys(groups).length > 20) {
+        const shuffled = dataset.slice();
+        for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        return shuffled.slice(0, maxRows);
+    }
+
     // Calculate proportional sample per class
     const ratio = maxRows / dataset.length;
     const sampled = [];
@@ -204,21 +216,39 @@ export async function runMLTraining(modelId, params, dataset, datasetSchema, tar
     try {
         const trainingPromise = (async () => {
             if (modelId === 'knn') {
-                const knn = new KNN(XTrain, yTrain, { k: Math.min(params.k || 5, XTrain.length - 1) });
+                const kVal = Math.max(1, Math.min(params.k || 5, XTrain.length - 1));
+                const isManhattan = (params.metric || '').toLowerCase().includes('manhattan');
+                const knnOptions = { k: kVal };
+                if (isManhattan) {
+                    knnOptions.distance = (a, b) => {
+                        let sum = 0;
+                        for (let i = 0; i < a.length; i++) sum += Math.abs(a[i] - b[i]);
+                        return sum;
+                    };
+                }
+                const knn = new KNN(XTrain, yTrain, knnOptions);
                 return knn.predict(XTest);
             } else if (modelId === 'dt') {
                 const dt = new DecisionTreeClassifier({ maxDepth: params.maxDepth || 3 });
                 dt.train(XTrain, yTrain);
                 return dt.predict(XTest);
             } else if (modelId === 'rf') {
-                // Cap trees at 50 for performance
-                const nTrees = Math.min(params.trees || 20, 50);
+                // Cap trees at 30 and limit data for performance
+                const nTrees = Math.min(params.trees || 20, 30);
+                // RF is O(n*features*trees) — use smaller dataset to prevent UI freeze
+                let rfXTrain = XTrain;
+                let rfYTrain = yTrain;
+                if (XTrain.length > 500) {
+                    rfXTrain = XTrain.slice(0, 500);
+                    rfYTrain = yTrain.slice(0, 500);
+                }
                 const rf = new RandomForestClassifier({ 
                     nEstimators: nTrees, 
-                    maxFeatures: Math.min(1.0, Math.max(0.5, 5 / (XTrain[0]?.length || 1))),
-                    seed: 42
+                    maxFeatures: Math.min(0.7, Math.max(0.3, 4 / (rfXTrain[0]?.length || 1))),
+                    seed: 42,
+                    useSampleBagging: true
                 });
-                rf.train(XTrain, yTrain);
+                rf.train(rfXTrain, rfYTrain);
                 return rf.predict(XTest);
             } else if (modelId === 'nb') {
                 const nb = new GaussianNB();

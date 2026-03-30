@@ -86,6 +86,9 @@ function App() {
   const [datasetSchema, setDatasetSchema] = useState([]);
   const [targetColumn, setTargetColumn] = useState(null);
   const [trainedModelResult, setTrainedModelResult] = useState(null);
+  
+  // Model Comparison State (lifted here so it persists when returning from Step 5 to Step 4)
+  const [comparisonList, setComparisonList] = useState([]);
 
   const toggleTheme = () => setIsDarkMode(d => !d);
 
@@ -172,7 +175,8 @@ function App() {
     dataset, setDataset,
     datasetSchema, setDatasetSchema,
     targetColumn, setTargetColumn,
-    trainedModelResult, setTrainedModelResult
+    trainedModelResult, setTrainedModelResult,
+    comparisonList, setComparisonList
   };
 
   return (

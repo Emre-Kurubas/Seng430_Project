@@ -88,10 +88,19 @@ const generatePatientContributions = (features, patient) => {
         const isRisk = magnitude > 0;
         const val = patient.rowData[f.id];
 
+        let dispVal = 'N/A';
+        if (val !== undefined && val !== null) {
+            if (typeof val === 'number') {
+                dispVal = val % 1 === 0 ? String(val) : val.toFixed(2);
+            } else {
+                dispVal = String(val).slice(0, 20);
+            }
+        }
+
         return {
             id: f.id,
-            label: f.label,
-            value: val !== undefined ? String(val).slice(0, 15) : 'N/A',
+            label: f.label.length > 25 ? f.label.slice(0, 22) + '...' : f.label,
+            value: dispVal,
             contribution: magnitude,
             isRisk,
         };
@@ -126,9 +135,21 @@ const generatePatients = (features, dataset, targetColumn) => {
 
         const vitalsArr = features.slice(0, 4).map(f => {
             const val = row[f.id];
+            
+            // Format val if it's numeric to prevent "0.0" trailing zero floating point artifacts 
+            // when it's an exact zero or weirdly scaled
+            let dispVal = 'N/A';
+            if (val !== undefined && val !== null) {
+                if (typeof val === 'number') {
+                    dispVal = val % 1 === 0 ? String(val) : val.toFixed(2);
+                } else {
+                    dispVal = String(val).slice(0, 20);
+                }
+            }
+
             return {
-                label: f.label.slice(0, 15),
-                value: val !== undefined ? String(val).slice(0, 12) : 'N/A',
+                label: f.label.length > 25 ? f.label.slice(0, 22) + '...' : f.label,
+                value: dispVal,
                 abnormal: false
             };
         });
@@ -245,11 +266,37 @@ const Explainability = ({ isDarkMode, onNext, onPrev, domain, dataset, datasetSc
     const primaryStr = domain?.theme?.primary || '#6366f1';
     const secondaryStr = domain?.theme?.secondary || '#10b981';
     
-    // Helper: convert snake_case to readable name
-    const toReadable = (name) => name
-        .replace(/_/g, ' ')
-        .replace(/([a-z])([A-Z])/g, '$1 $2')
-        .replace(/\b\w/g, c => c.toUpperCase());
+    // Helper: convert column names to highly readable clinical features
+    const toReadable = (name) => {
+        if (!name) return '';
+        const lower = name.toLowerCase();
+        
+        // Exact clinical acronyms
+        const ACRONYMS = {
+            'qids': 'QIDS-SR Score',
+            'bmi': 'Body Mass Index (BMI)',
+            'bp': 'Blood Pressure',
+            'hr': 'Heart Rate',
+            'ef': 'Ejection Fraction',
+            'gfr': 'eGFR',
+            'bun': 'Blood Urea Nitrogen',
+            'wbc': 'White Blood Cell Count',
+            'rbc': 'Red Blood Cell Count',
+            'creatinine_phosphokinase': 'Creatinine Phosphokinase'
+        };
+        
+        if (ACRONYMS[lower]) return ACRONYMS[lower];
+        
+        // Handle standalone acronyms inside strings too + general cleanup
+        let formatted = name.replace(/_/g, ' ');
+        formatted = formatted.replace(/([a-z])([A-Z])/g, '$1 $2');
+        
+        // Capitalize words but keep acronyms safe
+        return formatted.split(' ').map(word => {
+            if (ACRONYMS[word.toLowerCase()]) return ACRONYMS[word.toLowerCase()];
+            return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+        }).join(' ');
+    };
 
     // Known clinical descriptions for common columns
     const CLINICAL_DESC = {
@@ -279,6 +326,20 @@ const Explainability = ({ isDarkMode, onNext, onPrev, domain, dataset, datasetSc
         'blood_pressure': 'Blood pressure measurement (mmHg)',
         'heart_rate': 'Heart rate (bpm)',
         'cholesterol': 'Total cholesterol level (mg/dL)',
+        'academic pressure': 'Level of academic pressure (1-5 scale)',
+        'work pressure': 'Level of work-related pressure (1-5 scale)',
+        'cgpa': 'Cumulative Grade Point Average',
+        'study satisfaction': 'Satisfaction with studies (1-5 scale)',
+        'job satisfaction': 'Satisfaction with job (1-5 scale)',
+        'sleep duration': 'Average sleep duration category',
+        'dietary habits': 'Dietary habits quality (Healthy/Moderate/Unhealthy)',
+        'work/study hours': 'Daily work or study hours',
+        'financial stress': 'Level of financial stress (1-5 scale)',
+        'family history of mental illness': 'Family history of mental illness (Yes/No)',
+        'have you ever had suicidal thoughts ?': 'History of suicidal thoughts (Yes/No)',
+        'profession': 'Current profession or occupation',
+        'degree': 'Current or completed educational degree',
+        'depression': 'Depression status (0 = No, 1 = Yes)',
     };
 
     const activeFeatures = React.useMemo(() => {

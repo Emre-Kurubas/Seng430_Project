@@ -255,6 +255,9 @@ const DataExploration = ({ isDarkMode, onNext, onPrev, domain, onPatientCountCha
         // Compute class balance using the target column
         computeClassBalance(data, lastField);
 
+        // DON'T report total parsed row count — report the actual dataset size
+        // that will be used (after sampling). patientCount is updated later in handleMapperSave.
+        // For now, report the total so the UI can show it before mapping.
         onPatientCountChange?.(patients);
         setIsLoading(false);
         setUploadSuccess(true);
@@ -360,8 +363,12 @@ const DataExploration = ({ isDarkMode, onNext, onPrev, domain, onPatientCountCha
                     const lastField = targetColumn || measurements[measurements.length - 1]?.name;
                     const sampled = stratifiedSample(parsedData, lastField, 1000);
                     setDataset(sampled);
+                    // Update patientCount to reflect the ACTUAL sampled dataset size
+                    onPatientCountChange?.(sampled.length);
                 } else {
                     setDataset(parsedData);
+                    // Update patientCount to reflect full dataset size
+                    onPatientCountChange?.(parsedData.length);
                 }
             }
         }
@@ -703,7 +710,7 @@ const DataExploration = ({ isDarkMode, onNext, onPrev, domain, onPatientCountCha
                     {/* Class Balance */}
                     <div className={'p-6 rounded-xl border shadow-sm ' + (isDarkMode ? 'bg-slate-800/50 border-slate-700' : 'bg-white border-slate-200')}>
                         <h3 className={'text-xs font-bold uppercase tracking-wider mb-6 ' + (isDarkMode ? 'text-slate-400' : 'text-slate-500')}>
-                            Class Balance — Distribution of &quot;{targetColumn || 'Unknown'}&quot;
+                            Class Balance — Distribution of &quot;{targetColumn ? formatColumnName(targetColumn) : 'Unknown'}&quot;
                         </h3>
                         <ClassBalanceChart classBalance={classBalance} isLoading={isLoading} isDarkMode={isDarkMode} />
                     </div>
@@ -726,7 +733,7 @@ const DataExploration = ({ isDarkMode, onNext, onPrev, domain, onPatientCountCha
                                 <tbody className={'divide-y ' + (isDarkMode ? 'divide-slate-700 text-slate-300' : 'divide-slate-100 text-slate-700')}>
                                     {measurements.map((item) => (
                                         <tr key={item.name} className={(isDarkMode ? 'hover:bg-slate-800/80' : 'hover:bg-slate-50/80') + ' transition-colors'}>
-                                            <td className="px-6 py-4 font-medium">{item.name}</td>
+                                            <td className="px-6 py-4 font-medium">{formatColumnName(item.name)}</td>
                                             <td className="px-6 py-4">{item.type}</td>
                                             <td className="px-6 py-4">{item.missing}</td>
                                             <td className="px-6 py-4">
@@ -792,6 +799,7 @@ const DataExploration = ({ isDarkMode, onNext, onPrev, domain, onPatientCountCha
                         onSave={handleMapperSave}
                         isDarkMode={isDarkMode}
                         columns={mapperColumns}
+                        formatColumnName={formatColumnName}
                     />
                 )}
             </AnimatePresence>

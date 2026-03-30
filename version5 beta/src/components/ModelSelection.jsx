@@ -56,8 +56,8 @@ const VIZ_CONTENT = {
         title: 'SVM — Decision Boundary & Support Vectors',
         desc: 'Support Vector Machine (SVM) works like drawing a line (or boundary) to keep two different groups as far apart as possible. The "Support Vectors" are just the patients sitting closest to this line. They are the most important cases because they shape where the boundary is drawn.',
         legends: [
-            { type: 'circle', color: 'bg-red-600', label: 'Readmitted' },
-            { type: 'circle', color: 'bg-green-600', label: 'Not Readmitted' },
+            { type: 'circle', color: 'bg-red-600', label: 'Positive Outcome' },
+            { type: 'circle', color: 'bg-green-600', label: 'Negative Outcome' },
             { type: 'circle-border', label: 'Support Vector (Critical Patient)' },
             { type: 'line', style: 'solid', label: 'Decision Boundary' },
             { type: 'line', style: 'dashed', label: 'Margin (Safety Buffer)' }
@@ -68,14 +68,14 @@ const VIZ_CONTENT = {
         title: 'Decision Tree — Clinical Decision Flowchart',
         desc: 'The tree asks yes/no questions about patient measurements. Follow the path from top to bottom to reach a final decision. Hover over nodes to see details.',
         legends: [],
-        clinical: 'This looks like a clinical guideline flowchart. The first question (Ejection Fraction < 38%) is the most important split - the model identified this as the strongest predictor.'
+        clinical: 'This looks like a clinical guideline flowchart. The first question split is the most important one - the model identified this as the strongest predictor.'
     },
     rf: {
         title: 'Random Forest — Ensemble Voting',
         desc: 'Instead of relying on a single rule, Random Forest trains many individual Decision Trees on random subsets of the data. Each tree votes on the patient\'s outcome.',
         legends: [
-            { type: 'dot', color: 'bg-rose-500', label: 'Vote: Readmit' },
-            { type: 'dot', color: 'bg-emerald-400', label: 'Vote: Safe' },
+            { type: 'dot', color: 'bg-rose-500', label: 'Vote: Positive' },
+            { type: 'dot', color: 'bg-emerald-400', label: 'Vote: Negative' },
             { type: 'glow', label: 'Ensemble Aggregator' }
         ],
         clinical: 'Stability through consensus. By having 100 trees vote, it balances out individual bias or errors, making the prediction much more robust against statistical noise.'
@@ -84,8 +84,8 @@ const VIZ_CONTENT = {
         title: 'Logistic Regression — Probability Curve',
         desc: 'Logistic Regression maps clinical measurements to a continuous risk probability from 0% to 100% using an S-shaped (sigmoid) curve.',
         legends: [
-            { type: 'circle', color: 'bg-rose-500', label: 'Known Readmitted' },
-            { type: 'circle', color: 'bg-emerald-400', label: 'Known Safe' },
+            { type: 'circle', color: 'bg-rose-500', label: 'Known Positive' },
+            { type: 'circle', color: 'bg-emerald-400', label: 'Known Negative' },
             { type: 'line', color: 'bg-indigo-400', label: 'Sigmoid Probability' },
             { type: 'line', style: 'dashed', color: 'bg-amber-400', label: 'Decision Threshold' }
         ],
@@ -95,11 +95,11 @@ const VIZ_CONTENT = {
         title: 'Naive Bayes — Distributions',
         desc: 'Naive Bayes computes independent probability distributions for health conditions. It estimates risk by looking at where a patient\'s data points overlap these distributions.',
         legends: [
-            { type: 'area', color: 'bg-emerald-500', label: 'Safe Distribution' },
-            { type: 'area', color: 'bg-rose-500', label: 'Readmitted Distribution' },
+            { type: 'area', color: 'bg-emerald-500', label: 'Negative Distribution' },
+            { type: 'area', color: 'bg-rose-500', label: 'Positive Distribution' },
             { type: 'dot', color: 'bg-amber-400', label: 'Overlap (Ambiguity Area)' }
         ],
-        clinical: 'Based on pure statistical mapping of the dataset. For instance: "Given Age=70, what is the statistical likelihood of readmission vs safety?".'
+        clinical: 'Based on pure statistical mapping of the dataset. For instance: "Given these factors, what is the statistical likelihood of this outcome?".'
     }
 };
 
@@ -113,7 +113,7 @@ const MODELS = [
     { id: 'nb', name: 'Naive Bayes', icon: Info, desc: 'Uses probability theory to estimate likelihood of outcomes.' },
 ];
 
-const ModelSelection = ({ isDarkMode, onNext, onPrev, dataset, datasetSchema, targetColumn, setTrainedModelResult, domain }) => {
+const ModelSelection = ({ isDarkMode, onNext, onPrev, dataset, datasetSchema, targetColumn, setTrainedModelResult, domain, comparisonList, setComparisonList }) => {
     const primaryStr = domain?.theme?.primary || '#6366f1';
     const secondaryStr = domain?.theme?.secondary || '#10b981';
 
@@ -121,7 +121,6 @@ const ModelSelection = ({ isDarkMode, onNext, onPrev, dataset, datasetSchema, ta
     const [autoRetrain, setAutoRetrain] = useState(true);
     const [isTraining, setIsTraining] = useState(false);
     const [isInitialLoading, setIsInitialLoading] = useState(true);
-    const [comparisonList, setComparisonList] = useState([]);
     const [lastResult, setLastResult] = useState(null);
     const [trainError, setTrainError] = useState(null);
     
@@ -216,12 +215,13 @@ const ModelSelection = ({ isDarkMode, onNext, onPrev, dataset, datasetSchema, ta
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedModel, params, dataset, datasetSchema, targetColumn, isInitialLoading]);
 
-    // Debounced auto-retrain
+    // Debounced auto-retrain (longer delay for heavier models like RF)
     useEffect(() => {
         if (autoRetrain) {
+            const delay = selectedModel === 'rf' ? 2000 : 1200;
             const timer = setTimeout(() => {
                 trainModel();
-            }, 1200); // Large debounce to prevent rapid re-computation
+            }, delay);
             return () => clearTimeout(timer);
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -229,15 +229,16 @@ const ModelSelection = ({ isDarkMode, onNext, onPrev, dataset, datasetSchema, ta
 
     const addToComparison = () => {
         if (lastResult) {
-            // No duplicates logic: check model name + settings
-            const isDuplicate = comparisonList.some(r =>
-                r.modelName === lastResult.modelName &&
-                r.settings === lastResult.settings
-            );
-
-            if (!isDuplicate) {
-                setComparisonList([...comparisonList, lastResult]);
-            }
+            setComparisonList(prev => {
+                const isDuplicate = prev.some(r =>
+                    r.modelName === lastResult.modelName &&
+                    r.settings === lastResult.settings
+                );
+                if (!isDuplicate) {
+                    return [...prev, lastResult];
+                }
+                return prev;
+            });
         }
     };
 
@@ -383,18 +384,18 @@ const ModelSelection = ({ isDarkMode, onNext, onPrev, dataset, datasetSchema, ta
                                             <span className={`text-sm font-mono font-bold`} style={{ color: primaryStr }}>{params.knn.k}</span>
                                         </div>
                                         <input
-                                            type="range" min="1" max="25" step="1"
+                                            type="range" min="1" max="20" step="1"
                                             value={params.knn.k}
                                             onChange={(e) => setParams({ ...params, knn: { ...params.knn, k: Number(e.target.value) } })}
                                             className={`w-full h-2 rounded-lg appearance-none cursor-pointer transition-all ${isDarkMode ? 'bg-slate-700/50' : 'bg-slate-200'}`}
                                             style={{
-                                                background: `linear-gradient(to right, ${primaryStr} ${(params.knn.k / 25) * 100}%, ${isDarkMode ? '#334155' : '#e2e8f0'} ${(params.knn.k / 25) * 100}%)`,
+                                                background: `linear-gradient(to right, ${primaryStr} ${(params.knn.k / 20) * 100}%, ${isDarkMode ? '#334155' : '#e2e8f0'} ${(params.knn.k / 20) * 100}%)`,
                                                 accentColor: primaryStr
                                             }}
                                         />
                                         <div className="flex justify-between text-[10px] text-slate-500">
                                             <span>1 (Sensitive)</span>
-                                            <span>25 (General)</span>
+                                            <span>20 (General)</span>
                                         </div>
                                     </div>
                                     <div className="space-y-2">
@@ -586,12 +587,12 @@ const ModelSelection = ({ isDarkMode, onNext, onPrev, dataset, datasetSchema, ta
                                 )}
                                 <button
                                     onClick={addToComparison}
-                                    disabled={!lastResult || isTraining || comparisonList.some(r => r.id === lastResult?.id)}
-                                    className={`flex-1 flex gap-2 justify-center items-center py-2.5 rounded-lg font-bold border transition-all duration-300 ${(!lastResult || isTraining || comparisonList.some(r => r.id === lastResult?.id))
+                                    disabled={!lastResult || isTraining || comparisonList.some(r => r.modelName === lastResult?.modelName && r.settings === lastResult?.settings)}
+                                    className={`flex-1 flex gap-2 justify-center items-center py-2.5 rounded-lg font-bold border transition-all duration-300 ${(!lastResult || isTraining || comparisonList.some(r => r.modelName === lastResult?.modelName && r.settings === lastResult?.settings))
                                         ? isDarkMode ? 'border-slate-700/50 text-slate-600 cursor-not-allowed bg-transparent' : 'border-slate-200 text-slate-300 cursor-not-allowed bg-transparent'
                                         : 'bg-transparent shadow-sm'
                                         }`}
-                                    style={(!lastResult || isTraining || comparisonList.some(r => r.id === lastResult?.id)) ? {} : { borderColor: primaryStr, color: primaryStr, backgroundColor: `${primaryStr}10` }}
+                                    style={(!lastResult || isTraining || comparisonList.some(r => r.modelName === lastResult?.modelName && r.settings === lastResult?.settings)) ? {} : { borderColor: primaryStr, color: primaryStr, backgroundColor: `${primaryStr}10` }}
                                 >
                                     <Plus className="w-4 h-4" />
                                     <span>Compare Model</span>

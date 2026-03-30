@@ -24,7 +24,7 @@ const ROLE_OPTIONS = [
     'Ignore (not a metric)',
 ];
 
-const ColumnMapper = ({ isOpen, onClose, onSave, isDarkMode, columns: externalCols }) => {
+const ColumnMapper = ({ isOpen, onClose, onSave, isDarkMode, columns: externalCols, formatColumnName }) => {
     // Build editable state from external columns
     const [columns, setColumns] = useState(() => {
         if (externalCols && externalCols.length > 0) {
@@ -221,10 +221,14 @@ const ColumnMapper = ({ isOpen, onClose, onSave, isDarkMode, columns: externalCo
                                             }}
                                         >
                                             {columns.filter(c => c.role === 'Target (what we predict)').map(c => (
-                                                <option key={c.name} value={c.name}>{c.name}</option>
+                                                <option key={c.name} value={c.name}>
+                                                    {formatColumnName ? formatColumnName(c.name) : c.name.replace(/_/g, ' ').replace(/([a-z])([A-Z])/g, '$1 $2').replace(/\b\w/g, char => char.toUpperCase())}
+                                                </option>
                                             ))}
                                             {columns.filter(c => c.role !== 'Target (what we predict)').map(c => (
-                                                <option key={c.name} value={c.name}>{c.name}</option>
+                                                <option key={c.name} value={c.name}>
+                                                    {formatColumnName ? formatColumnName(c.name) : c.name.replace(/_/g, ' ').replace(/([a-z])([A-Z])/g, '$1 $2').replace(/\b\w/g, char => char.toUpperCase())}
+                                                </option>
                                             ))}
                                         </select>
                                         <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none">
@@ -362,7 +366,7 @@ const ColumnMapper = ({ isOpen, onClose, onSave, isDarkMode, columns: externalCo
                                     >
                                         <div className={`col-span-4 font-bold text-sm truncate flex items-center gap-3 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                                             <div className={`w-1.5 h-1.5 rounded-full ${col.status === 'error' ? 'bg-red-500' : col.status === 'warning' ? 'bg-amber-500' : col.status === 'muted' ? 'bg-slate-500' : 'bg-emerald-500'}`} />
-                                            {col.name}
+                                            {formatColumnName ? formatColumnName(col.name) : col.name.replace(/_/g, ' ').replace(/([a-z])([A-Z])/g, '$1 $2').replace(/\b\w/g, char => char.toUpperCase())}
                                         </div>
 
                                         <div className="col-span-4">
