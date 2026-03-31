@@ -5,7 +5,7 @@
 <br>
 
 <h3>🌐 Try the Live Interactive Demo</h3>
-<a href="d2wnx6it715k3z.cloudfront.net">
+<a href="https://d2wnx6it715k3z.cloudfront.net">
 <img src="https://img.shields.io/badge/🚀%20Launch%20Live%20Demo-22c55e?style=for-the-badge&logo=vercel&logoColor=white" alt="Launch Live Demo" />
 </a>
 
