@@ -148,18 +148,18 @@ const ModelSelection = ({ isDarkMode, onNext, onPrev, dataset, datasetSchema, ta
         return '';
     };
 
-    const trainModel = useCallback(async () => {
+    // Stable training function
+    const trainModel = useCallback(async (isAuto = false) => {
+        if (isTraining) return;
+        
+        // Cancellation check
         const currentTrainId = ++trainingIdRef.current;
-        setIsTraining(true);
+        
         setTrainError(null);
         
-        // Double-rAF yield to let React render the loading state
-        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-        
-        // Check if this training was cancelled by a newer one
-        if (currentTrainId !== trainingIdRef.current) { setIsTraining(false); return; }
-        
-        if (!dataset || dataset.length === 0) {
+        // Guard: Check data availability
+        if (!dataset || dataset.length === 0 || !datasetSchema || datasetSchema.length === 0) {
+            console.warn('Training aborted: Missing dataset or schema');
             setLastResult({
                 id: Date.now(),
                 modelName: MODELS.find(m => m.id === selectedModel).name,
@@ -174,37 +174,40 @@ const ModelSelection = ({ isDarkMode, onNext, onPrev, dataset, datasetSchema, ta
             return;
         }
 
+        setIsTraining(true);
+        
+        // Yield to browser to show spinner
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+
         try {
             const metrics = await runMLTraining(selectedModel, params[selectedModel], dataset, datasetSchema, targetColumn);
             
-            // Check again if cancelled
-            if (currentTrainId !== trainingIdRef.current) { setIsTraining(false); return; }
-            
-            const modelName = MODELS.find(m => m.id === selectedModel).name;
+            if (currentTrainId !== trainingIdRef.current) return;
+
             const settingsStr = getSettingsString();
+            const modelName = MODELS.find(m => m.id === selectedModel).name;
             
-            setLastResult({
+            const result = {
                 id: Date.now(),
-                modelName: modelName,
+                modelName,
                 settings: settingsStr,
-                accuracy: metrics.accuracy,
-                sensitivity: metrics.sensitivity,
-                specificity: metrics.specificity,
-                auc: metrics.auc,
-            });
+                ...metrics
+            };
+            
+            setLastResult(result);
             
             if (setTrainedModelResult) {
                 setTrainedModelResult({
                     modelId: selectedModel,
-                    modelName: modelName,
+                    modelName,
                     settings: settingsStr,
                     ...metrics
                 });
             }
         } catch (err) {
-            console.warn('Training error:', err.message);
+            console.error('ML Pipeline Error:', err);
             if (currentTrainId === trainingIdRef.current) {
-                setTrainError(err.message);
+                setTrainError(err.message || 'An unexpected error occurred during training.');
             }
         } finally {
             if (currentTrainId === trainingIdRef.current) {
@@ -212,20 +215,21 @@ const ModelSelection = ({ isDarkMode, onNext, onPrev, dataset, datasetSchema, ta
                 if (isInitialLoading) setIsInitialLoading(false);
             }
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedModel, params, dataset, datasetSchema, targetColumn, isInitialLoading]);
+    }, [selectedModel, params, dataset, datasetSchema, targetColumn, isTraining, isInitialLoading, setTrainedModelResult]);
 
-    // Debounced auto-retrain (longer delay for heavier models like RF)
+    // Initial training & auto-retrain logic
     useEffect(() => {
-        if (autoRetrain) {
-            const delay = selectedModel === 'rf' ? 2000 : 1200;
-            const timer = setTimeout(() => {
-                trainModel();
+        let timer;
+        if (autoRetrain || isInitialLoading) {
+            const delay = isInitialLoading ? 500 : (selectedModel === 'rf' ? 2200 : 1200);
+            timer = setTimeout(() => {
+                trainModel(true);
             }, delay);
-            return () => clearTimeout(timer);
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [params, selectedModel, autoRetrain, trainModel]);
+        return () => {
+            if (timer) clearTimeout(timer);
+        };
+    }, [selectedModel, params, autoRetrain, trainModel, isInitialLoading]);
 
     const addToComparison = () => {
         if (lastResult) {
@@ -569,34 +573,42 @@ const ModelSelection = ({ isDarkMode, onNext, onPrev, dataset, datasetSchema, ta
                                 </div>
                             )}
 
-                            <div className="flex gap-3 pt-6">
-                                {(!autoRetrain) && (
-                                    <button
-                                        onClick={trainModel}
-                                        disabled={isTraining}
-                                        className={`flex-1 flex gap-2 justify-center items-center py-2.5 rounded-lg font-bold transition-all duration-300 relative overflow-hidden group ${isTraining
-                                            ? 'bg-slate-700 text-slate-400 cursor-wait'
-                                            : 'text-white hover:-translate-y-0.5'
-                                            }`}
-                                        style={!isTraining ? { background: `linear-gradient(to right, ${primaryStr}, ${secondaryStr})`, boxShadow: `0 0 20px ${primaryStr}60` } : {}}
-                                    >
-                                        {!isTraining && <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />}
-                                        {isTraining ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Play className="w-4 h-4 fill-current" />}
-                                        <span className="relative z-10">{isTraining ? 'Training...' : 'Run Simulation'}</span>
-                                    </button>
+                            <div className="flex flex-col gap-3 pt-6">
+                                {trainError && (
+                                    <div className={`p-3 rounded-lg border text-xs flex gap-2 items-start ${isDarkMode ? 'bg-red-900/20 border-red-800 text-red-200' : 'bg-red-50 border-red-200 text-red-800'}`}>
+                                        <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                                        <span>{trainError}</span>
+                                    </div>
                                 )}
-                                <button
-                                    onClick={addToComparison}
-                                    disabled={!lastResult || isTraining || comparisonList.some(r => r.modelName === lastResult?.modelName && r.settings === lastResult?.settings)}
-                                    className={`flex-1 flex gap-2 justify-center items-center py-2.5 rounded-lg font-bold border transition-all duration-300 ${(!lastResult || isTraining || comparisonList.some(r => r.modelName === lastResult?.modelName && r.settings === lastResult?.settings))
-                                        ? isDarkMode ? 'border-slate-700/50 text-slate-600 cursor-not-allowed bg-transparent' : 'border-slate-200 text-slate-300 cursor-not-allowed bg-transparent'
-                                        : 'bg-transparent shadow-sm'
-                                        }`}
-                                    style={(!lastResult || isTraining || comparisonList.some(r => r.modelName === lastResult?.modelName && r.settings === lastResult?.settings)) ? {} : { borderColor: primaryStr, color: primaryStr, backgroundColor: `${primaryStr}10` }}
-                                >
-                                    <Plus className="w-4 h-4" />
-                                    <span>Compare Model</span>
-                                </button>
+                                <div className="flex gap-3">
+                                    {(!autoRetrain || trainError) && (
+                                        <button
+                                            onClick={() => trainModel(false)}
+                                            disabled={isTraining}
+                                            className={`flex-1 flex gap-2 justify-center items-center py-2.5 rounded-lg font-bold transition-all duration-300 relative overflow-hidden group ${isTraining
+                                                ? 'bg-slate-700 text-slate-400 cursor-wait'
+                                                : 'text-white hover:-translate-y-0.5'
+                                                }`}
+                                            style={!isTraining ? { background: `linear-gradient(to right, ${primaryStr}, ${secondaryStr})`, boxShadow: `0 0 20px ${primaryStr}60` } : {}}
+                                        >
+                                            {!isTraining && <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />}
+                                            {isTraining ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Play className="w-4 h-4 fill-current" />}
+                                            <span className="relative z-10">{isTraining ? 'Training...' : trainError ? 'Retry Training' : 'Run Simulation'}</span>
+                                        </button>
+                                    )}
+                                    <button
+                                        onClick={addToComparison}
+                                        disabled={!lastResult || isTraining || comparisonList.some(r => r.modelName === lastResult?.modelName && r.settings === lastResult?.settings)}
+                                        className={`flex-1 flex gap-2 justify-center items-center py-2.5 rounded-lg font-bold border transition-all duration-300 ${(!lastResult || isTraining || comparisonList.some(r => r.modelName === lastResult?.modelName && r.settings === lastResult?.settings))
+                                            ? isDarkMode ? 'border-slate-700/50 text-slate-600 cursor-not-allowed bg-transparent' : 'border-slate-200 text-slate-300 cursor-not-allowed bg-transparent'
+                                            : 'bg-transparent shadow-sm'
+                                            }`}
+                                        style={(!lastResult || isTraining || comparisonList.some(r => r.modelName === lastResult?.modelName && r.settings === lastResult?.settings)) ? {} : { borderColor: primaryStr, color: primaryStr, backgroundColor: `${primaryStr}10` }}
+                                    >
+                                        <Plus className="w-4 h-4" />
+                                        <span>Compare Model</span>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>

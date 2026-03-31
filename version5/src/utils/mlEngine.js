@@ -56,14 +56,20 @@ export function stratifiedSample(dataset, targetColumn, maxRows) {
 
 // ─── Prepare Data ────────────────────────────────────────────────────────────
 export function prepareData(dataset, datasetSchema, targetColumn) {
-    if (!dataset || dataset.length === 0 || !targetColumn) return { X: [], y: [] };
+    if (!dataset || dataset.length === 0 || !datasetSchema || datasetSchema.length === 0) {
+        console.warn('mlEngine: Missing data or schema for preparation');
+        return { X: [], y: [] };
+    }
 
     // Find feature columns (Numeric or Category)
     const featureCols = datasetSchema
-        .filter(c => c.role === 'Number (measurement)' || c.role === 'Category')
+        .filter(c => c && (c.role === 'Number (measurement)' || c.role === 'Category'))
         .map(c => c.name);
 
-    if (featureCols.length === 0) return { X: [], y: [] };
+    if (featureCols.length === 0) {
+        console.warn('mlEngine: No feature columns identified');
+        return { X: [], y: [] };
+    }
 
     const X = [];
     const y = [];

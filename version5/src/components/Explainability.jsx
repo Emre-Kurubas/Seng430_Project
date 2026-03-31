@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 // eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -127,7 +127,7 @@ const generatePatients = (features, dataset, targetColumn) => {
     }
 
     const shuffled = [...dataset].sort(() => 0.5 - Math.random());
-    const selected = shuffled.slice(0, Math.min(8, dataset.length));
+    const selected = shuffled.slice(0, Math.min(3, dataset.length));
 
     return selected.map((row, i) => {
         const riskVal = row[targetColumn];
@@ -252,9 +252,9 @@ const WaterfallBar = React.memo(({ label, value, contribution, isRisk, maxAbs, i
             </div>
 
             {/* Value label */}
-            <span className={`text-xs font-bold font-mono shrink-0 w-12 text-right
+            <span className={`text-[10px] font-bold font-mono shrink-0 w-12 text-right
                 ${isRisk ? 'text-red-500' : 'text-emerald-500'}`}>
-                {sign}{contribution.toFixed(2)}
+                {isRisk ? 'Risk' : 'Safe'} {sign}{contribution.toFixed(2)}
             </span>
         </motion.div>
     );
@@ -343,6 +343,7 @@ const Explainability = ({ isDarkMode, onNext, onPrev, domain, dataset, datasetSc
     };
 
     const activeFeatures = React.useMemo(() => {
+        // 1. If we have a real dataset schema, use it
         if (datasetSchema && datasetSchema.length > 0) {
             return datasetSchema
                 .filter(col => col.role === 'Number (measurement)' || col.role === 'Category')
@@ -356,8 +357,19 @@ const Explainability = ({ isDarkMode, onNext, onPrev, domain, dataset, datasetSc
                     };
                 });
         }
+        
+        // 2. If no dataset but we have domain clinical features from specialties.js, use them for simulation
+        if (domain?.topFeaturesClinical && domain.topFeaturesClinical.length > 0) {
+            return domain.topFeaturesClinical.map((f, i) => ({
+                id: `feat_${i}`,
+                label: f.feature,
+                clinical: f.justification
+            }));
+        }
+
+        // 3. Fallback to hardcoded mock feature pools
         return DOMAIN_FEATURES[domainKey] || DOMAIN_FEATURES.default;
-    }, [datasetSchema, domainKey]);
+    }, [datasetSchema, domainKey, domain]);
 
     const [featureImportance, setFeatureImportance] = useState([]);
     const [patients, setPatients] = useState([]);
@@ -402,22 +414,45 @@ const Explainability = ({ isDarkMode, onNext, onPrev, domain, dataset, datasetSc
         default: 'The top-ranked feature aligns with established clinical knowledge — it is a well-recognised risk factor in the medical literature.',
     };
 
-    const senseCheck = top1
-        ? (senseCheckMessages[top1.id] || senseCheckMessages.default)
-        : '';
+    const senseCheck = useMemo(() => {
+        if (!top1) return '';
+        
+        // 1. Check if the current domain has built-in clinical justifications for this feature
+        if (domain?.topFeaturesClinical) {
+            const match = domain.topFeaturesClinical.find(f => 
+                f.feature.toLowerCase() === top1.label.toLowerCase() || 
+                f.feature.toLowerCase() === top1.id.toLowerCase()
+            );
+            if (match) return `${match.feature} is the top predictor — this makes strong clinical sense. ${match.justification}`;
+            
+            // If no exact match, but we have domain data, show the first domain justification as a general guide
+            const first = domain.topFeaturesClinical[0];
+            return `In ${domain.name}, ${top1.label} is currently the top driver. This aligns with clinical priorities such as ${first.feature}, which is known to be ${first.justification.toLowerCase()}`;
+        }
 
-    const whatIfMessages = {
-        ef: "What-If: If this patient's ejection fraction improved from very low to borderline (42%), the predicted risk would drop to approximately 38%. This supports the clinical value of optimising cardiac function.",
-        creatinine: "What-If: If this patient's creatinine were 1.2 instead of 2.1, the predicted risk would drop to approximately 41%. This kind of analysis helps assess kidney-targeted interventions.",
-        age: "What-If: Age cannot be modified, but this highlights the need for age-adjusted care protocols and proactive discharge planning for elderly patients.",
-        gfr: "What-If: If eGFR improved by 15 units with optimal fluid management, the model estimates a risk reduction of around 18%. Supports nephroprotective strategies.",
-        stage: "What-If: Staging is fixed at diagnosis, but the model confirms that stage III–IV patients need intensive post-discharge follow-up.",
-        default: "What-If: If the values of the top contributing feature were in the normal range, the model estimates a meaningful risk reduction. This helps assess which interventions might have most impact.",
-    };
+        // 2. Fallback to generic feature-based messages
+        return senseCheckMessages[top1.id] || senseCheckMessages.default;
+    }, [top1, domain]);
 
-    const whatIf = top1
-        ? (whatIfMessages[top1.id] || whatIfMessages.default)
-        : '';
+    const whatIf = useMemo(() => {
+        if (!top1) return '';
+        
+        // 1. Try to find domain-specific What-If if we add it in future (optional expansion)
+        // For now, let's make it smarter about the top feature name
+        const fName = top1.label;
+        
+        const genericWhatIf = `If the patient's ${fName.toLowerCase()} were to improve to a more stable clinical range, the model predicts the readmission risk would likely decrease. This demonstrates how targeted interventions on primary risk drivers can impact patient outcomes.`;
+
+        const mapping = {
+            ef: `If this patient's ejection fraction improved toward a more stable range (e.g. >40%), the predicted risk would drop significantly. This reinforces the clinical priority of cardiac optimisation.`,
+            creatinine: `If this patient's serum creatinine were lower (indicating better kidney function), the model estimates a meaningful risk reduction. This highlights the importance of nephro-protective care.`,
+            age: `While age cannot be modified, this identifies the patient as part of a high-vulnerability cohort that requires more intensive post-discharge support and 'hospital-at-home' monitoring.`,
+            gfr: `If eGFR improved with fluid management and medication review, the model predicts a shift toward a lower risk category. This supports aggressive electrolyte and fluid monitoring.`,
+            stage: `While tumour stage is fixed, the high importance confirms that advanced-stage patients require a more robust clinical safety net during the first 30 days post-discharge.`,
+        };
+
+        return mapping[top1.id] || genericWhatIf;
+    }, [top1]);
 
     return (
         <div className="w-full space-y-6 pb-20">

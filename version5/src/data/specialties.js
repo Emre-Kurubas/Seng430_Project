@@ -17,7 +17,12 @@ export const specialties = [
             gradientTo: 'to-orange-500',
             text: 'text-rose-500',
             border: 'border-rose-500/30'
-        }
+        },
+        topFeaturesClinical: [
+            { feature: 'Ejection Fraction', justification: 'Low ejection fraction (below 40%) is a primary indicator of heart failure severity and predicts poor post-discharge outcomes.' },
+            { feature: 'Serum Creatinine', justification: 'Elevated creatinine reflects cardio-renal syndrome, where heart failure leads to kidney dysfunction, a major readmission driver.' },
+            { feature: 'Age', justification: 'Elderly patients have higher physiological fragility and more complex medication regimens, significantly increasing 30-day risk.' }
+        ]
     },
     {
         id: 2,
@@ -37,7 +42,12 @@ export const specialties = [
             gradientTo: 'to-blue-500',
             text: 'text-sky-500',
             border: 'border-sky-500/30'
-        }
+        },
+        topFeaturesClinical: [
+            { feature: 'Opacity Level', justification: 'Increased focal opacity on imaging is the hallmark of alveolar consolidation in bacterial pneumonia.' },
+            { feature: 'Patient Position', justification: 'Positioning affects image quality; supine films often hide subtle infiltrates compared to upright PA views.' },
+            { feature: 'Hilar Prominence', justification: 'Prominent hila often indicate lymphatic response or pulmonary congestion associated with infectious processes.' }
+        ]
     },
     {
         id: 3,
@@ -57,7 +67,12 @@ export const specialties = [
             gradientTo: 'to-cyan-500',
             text: 'text-teal-500',
             border: 'border-teal-500/30'
-        }
+        },
+        topFeaturesClinical: [
+            { feature: 'eGFR', justification: 'The Estimated Glomerular Filtration Rate is the gold standard for quantifying renal filtration capacity and staging CKD.' },
+            { feature: 'Serum Creatinine', justification: 'As a metabolic byproduct filtered by kidneys, its accumulation in blood is a direct sign of reduced clearance.' },
+            { feature: 'Haemoglobin', justification: 'Renal erythropoietin production declines in CKD, making anaemia a key secondary clinical indicator of disease stage.' }
+        ]
     },
     {
         id: 4,
@@ -77,7 +92,12 @@ export const specialties = [
             gradientTo: 'to-fuchsia-500',
             text: 'text-pink-500',
             border: 'border-pink-500/30'
-        }
+        },
+        topFeaturesClinical: [
+            { feature: 'Concave Points', justification: 'The frequency of concavities in cell nuclei suggests irregular growth patterns typical of malignant transformations.' },
+            { feature: 'Area Mean', justification: 'Larger average nuclear area is a well-recognised histological marker for rapid cell division in cancerous tissue.' },
+            { feature: 'Radius Worst', justification: 'Extreme nuclear size (worst radius) indicates significant cellular atypia, a core feature of high-grade malignancy.' }
+        ]
     },
     {
         id: 5,
@@ -97,7 +117,12 @@ export const specialties = [
             gradientTo: 'to-purple-500',
             text: 'text-violet-500',
             border: 'border-violet-500/30'
-        }
+        },
+        topFeaturesClinical: [
+            { feature: 'Spread Ratio', justification: 'Changes in fundamental frequency spread reflect loss of motor control over laryngeal muscles in early Parkinsonism.' },
+            { feature: 'Harmonicity (HNR)', justification: 'A lower harmonics-to-noise ratio indicates "breathiness" and vocal tremor, common clinical signs of dysarthria.' },
+            { feature: 'Shimmer', justification: 'Variations in vocal amplitude (shimmer) quantify the vocal instability produced by basal ganglia dysfunction.' }
+        ]
     },
     {
         id: 6,
@@ -117,7 +142,12 @@ export const specialties = [
             gradientTo: 'to-amber-500',
             text: 'text-yellow-600',
             border: 'border-yellow-500/30'
-        }
+        },
+        topFeaturesClinical: [
+            { feature: 'Glucose Level', justification: 'Elevated fasting glucose is the primary clinical indicator of insulin resistance and pre-diabetic metabolic states.' },
+            { feature: 'BMI', justification: 'High Body Mass Index is strongly associated with chronic inflammation and reduced insulin sensitivity in peripheral tissues.' },
+            { feature: 'Age', justification: 'The risk of Type 2 Diabetes increases with age due to progressive decline in beta-cell function and physical activity.' }
+        ]
     },
     {
         id: 7,
@@ -137,7 +167,12 @@ export const specialties = [
             gradientTo: 'to-green-500',
             text: 'text-lime-600',
             border: 'border-lime-500/30'
-        }
+        },
+        topFeaturesClinical: [
+            { feature: 'Alkaline Phosphatase', justification: 'Elevated ALP levels often suggest bile duct obstruction or active liver tissue regeneration/damage.' },
+            { feature: 'Albumin', justification: 'Low albumin synthesis is a hallmark of chronic liver failure, as the liver is the sole producer of this protein.' },
+            { feature: 'Total Bilirubin', justification: 'Built-up bilirubin indicates impaired hepatic clearance or biliary flow, leading to visible clinical jaundice.' }
+        ]
     },
     {
         id: 8,
@@ -157,7 +192,12 @@ export const specialties = [
             gradientTo: 'to-red-600',
             text: 'text-red-500',
             border: 'border-red-500/30'
-        }
+        },
+        topFeaturesClinical: [
+            { feature: 'Age', justification: 'Age is the strongest non-modifiable risk factor for stroke due to cumulative vascular wear and plaque formation.' },
+            { feature: 'Hypertension', justification: 'High blood pressure is the leading cause of both ischaemic and haemorrhagic strokes via arterial wall damage.' },
+            { feature: 'Avg Glucose', justification: 'Chronic hyperglycaemia promotes atherosclerosis and increases the likelihood of large-vessel occlusive events.' }
+        ]
     },
     {
         id: 9,
@@ -177,7 +217,12 @@ export const specialties = [
             gradientTo: 'to-indigo-600',
             text: 'text-indigo-500',
             border: 'border-indigo-500/30'
-        }
+        },
+        topFeaturesClinical: [
+            { feature: 'Academic Pressure', justification: 'High perceived pressure correlates with anxiety and burnout, major precursors to depressive episodes in students.' },
+            { feature: 'Sleep Duration', justification: 'Chronic sleep deprivation disrupts emotional regulation and neuroplasticity, significantly increasing mood disorder risk.' },
+            { feature: 'Financial Stress', justification: 'Economic instability acts as a persistent environmental stressor that compromises mental well-being and coping capacity.' }
+        ]
     },
     {
         id: 10,
@@ -197,7 +242,12 @@ export const specialties = [
             gradientTo: 'to-slate-400',
             text: 'text-slate-500',
             border: 'border-slate-500/30'
-        }
+        },
+        topFeaturesClinical: [
+            { feature: 'FEV1', justification: 'Forced Expiratory Volume in 1 second measures airway obstruction; lower values predict higher risk of lung failure.' },
+            { feature: 'Smoking History', justification: 'Continued tobacco exposure drives chronic inflammation, causing the structural lung damage that leads to exacerbations.' },
+            { feature: 'Oxygen Saturation', justification: 'Resting hypoxaemia is a critical indicator of severely compromised gas exchange and impending respiratory distress.' }
+        ]
     },
     {
         id: 11,
@@ -217,7 +267,12 @@ export const specialties = [
             gradientTo: 'to-rose-600',
             text: 'text-rose-700',
             border: 'border-rose-700/30'
-        }
+        },
+        topFeaturesClinical: [
+            { feature: 'MCV', justification: 'Mean Corpuscular Volume distinguishes microcytic (iron deficiency) from macrocytic (B12/folate deficiency) anaemias.' },
+            { feature: 'Haemoglobin', justification: 'The total amount of oxygen-carrying protein directly quantifies the severity of the patient\'s anaemic state.' },
+            { feature: 'Red Cell Width (RDW)', justification: 'High RDW indicates variation in cell sizes, suggesting a nutrient deficiency or recent onset of anaemia.' }
+        ]
     },
     {
         id: 12,
@@ -237,7 +292,12 @@ export const specialties = [
             gradientTo: 'to-amber-700',
             text: 'text-amber-600',
             border: 'border-amber-600/30'
-        }
+        },
+        topFeaturesClinical: [
+            { feature: 'Pigment Network', justification: 'Atypical or thickened pigment networks are key dermatoscopic indicators of dysplastic or malignant melanocytic growth.' },
+            { feature: 'Asymmetry', justification: 'Lack of symmetry in colour and shape suggests non-uniform cell proliferation, a hallmark of malignant lesions.' },
+            { feature: 'Border Irregularity', justification: 'Poorly defined or "scalloped" borders reflect infiltrative growth patterns common in basal cell carcinomas.' }
+        ]
     },
     {
         id: 13,
@@ -257,7 +317,12 @@ export const specialties = [
             gradientTo: 'to-teal-700',
             text: 'text-teal-600',
             border: 'border-teal-600/30'
-        }
+        },
+        topFeaturesClinical: [
+            { feature: 'Microaneurysms', justification: 'The number of tiny retinal vascular bulges (microaneurysms) is the earliest visible sign of diabetic retinopathy.' },
+            { feature: 'Exudates', justification: 'Leakage of fats and proteins (hard exudates) onto the retina suggests chronic vascular leak and macular risk.' },
+            { feature: 'Haemorrhages', justification: 'Retinal bleeds indicate advancing damage to the vascular walls, characteristic of proliferative retinopathy states.' }
+        ]
     },
     {
         id: 14,
@@ -277,7 +342,12 @@ export const specialties = [
             gradientTo: 'to-lime-700',
             text: 'text-lime-600',
             border: 'border-lime-600/30'
-        }
+        },
+        topFeaturesClinical: [
+            { feature: 'Pelvic Incidence', justification: 'This anatomic parameter determines spinal curvature; abnormal values are strongly linked to spondylolisthesis risk.' },
+            { feature: 'Lumbar Lordosis', justification: 'The angle of the lower back curve reflects compensatory changes due to disc degenerations or vertebral shifts.' },
+            { feature: 'Sacral Slope', justification: 'A key biomechanical marker for lumbar stability; deviations correlate with mechanical stress in the lower spine.' }
+        ]
     },
     {
         id: 15,
@@ -297,7 +367,12 @@ export const specialties = [
             gradientTo: 'to-red-800',
             text: 'text-red-600',
             border: 'border-red-600/30'
-        }
+        },
+        topFeaturesClinical: [
+            { feature: 'Lactate Level', justification: 'Elevated blood lactate is a critical clinical marker of tissue hypoperfusion and anaerobic metabolism in sepsis.' },
+            { feature: 'Heart Rate', justification: 'Persistent tachycardia is often the earliest physiological response to systemic infection and impending circulatory shock.' },
+            { feature: 'Temperature', justification: 'Both fever (hyperthermia) and low temperature (hypothermia) are core criteria for systemic inflammatory response syndrome (SIRS).' }
+        ]
     },
     {
         id: 16,
@@ -317,7 +392,12 @@ export const specialties = [
             gradientTo: 'to-rose-400',
             text: 'text-pink-500',
             border: 'border-pink-500/30'
-        }
+        },
+        topFeaturesClinical: [
+            { feature: 'Accelerations', justification: 'The presence of heart rate accelerations is a reassuring clinical sign of fetal well-being and oxygenation.' },
+            { feature: 'Decelerations', justification: 'Prolonged or late decelerations suggest fetal distress maybe due to cord compression or placental insufficiency.' },
+            { feature: 'Baseline Variability', justification: 'Reduced variability reflects potential CNS depression or fetal hypoxia, requiring immediate clinical review.' }
+        ]
     },
     {
         id: 17,
@@ -337,7 +417,12 @@ export const specialties = [
             gradientTo: 'to-red-500',
             text: 'text-amber-500',
             border: 'border-amber-500/30'
-        }
+        },
+        topFeaturesClinical: [
+            { feature: 'QRS Duration', justification: 'Prolonged QRS complexes indicate intraventricular conduction delays, core features of many clinical arrhythmias.' },
+            { feature: 'QT Interval', justification: 'Abnormal QT lengths are high-risk markers for Torsades de Pointes and other life-threatening ventricular tachycardias.' },
+            { feature: 'P-Wave Presence', justification: 'Absence of visible P-waves is the diagnostic hallmark for atrial fibrillation in standard 12-lead ECG analysis.' }
+        ]
     },
     {
         id: 18,
@@ -357,7 +442,12 @@ export const specialties = [
             gradientTo: 'to-purple-600',
             text: 'text-fuchsia-600',
             border: 'border-fuchsia-600/30'
-        }
+        },
+        topFeaturesClinical: [
+            { feature: 'HPV Status', justification: 'Persistent Human Papillomavirus infection is the single most significant clinical risk factor for cervical malignancy.' },
+            { feature: 'Age', justification: 'Cancer risk changes with age, reflecting both cumulative exposure to risk factors and the physiological history of screening.' },
+            { feature: 'STDs History', justification: 'A history of sexually transmitted diseases often correlates with increased susceptibility to cervical oncogenic viruses.' }
+        ]
     },
     {
         id: 19,
@@ -377,7 +467,12 @@ export const specialties = [
             gradientTo: 'to-emerald-400',
             text: 'text-emerald-500',
             border: 'border-emerald-500/30'
-        }
+        },
+        topFeaturesClinical: [
+            { feature: 'TSH Level', justification: 'Thyroid Stimulating Hormone is the primary marker; high levels typically indicate hypothyroidism while low suggest hyperthyroidism.' },
+            { feature: 'FT4 Index', justification: 'Free Thyroxine levels directly measure the gland\'s hormonal output, confirming metabolic over/under-activity.' },
+            { feature: 'Pregnant Status', justification: 'Pregnancy-related hormonal shifts drastically change thyroid demand and normal diagnostic reference ranges.' }
+        ]
     },
     {
         id: 20,
@@ -397,6 +492,11 @@ export const specialties = [
             gradientTo: 'to-violet-500',
             text: 'text-blue-500',
             border: 'border-blue-500/30'
-        }
+        },
+        topFeaturesClinical: [
+            { feature: 'Num Meds', justification: 'Polypharmacy (many medications) significantly increases the risk of drug-drug interactions and medication non-adherence.' },
+            { feature: 'HbA1c Result', justification: 'Long-term glycemic control reflects the patient\'s underlying metabolic stability and compliance with diabetic therapy.' },
+            { feature: 'Prior Diagnoses', justification: 'The number of pre-existing comorbidities indicates medical complexity and higher vulnerability to relapse post-discharge.' }
+        ]
     }
 ];
