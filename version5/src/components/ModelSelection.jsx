@@ -126,6 +126,7 @@ const ModelSelection = ({ isDarkMode, onNext, onPrev, dataset, datasetSchema, ta
     
     // Cancellation ref for stale training runs
     const trainingIdRef = useRef(0);
+    const lastTriggeredRef = useRef('');
 
     // Model Configurations & State
     const [params, setParams] = useState({
@@ -150,16 +151,10 @@ const ModelSelection = ({ isDarkMode, onNext, onPrev, dataset, datasetSchema, ta
 
     // Stable training function
     const trainModel = useCallback(async (isAuto = false) => {
-        if (isTraining) return;
-        
-        // Cancellation check
         const currentTrainId = ++trainingIdRef.current;
-        
         setTrainError(null);
         
-        // Guard: Check data availability
         if (!dataset || dataset.length === 0 || !datasetSchema || datasetSchema.length === 0) {
-            console.warn('Training aborted: Missing dataset or schema');
             setLastResult({
                 id: Date.now(),
                 modelName: MODELS.find(m => m.id === selectedModel).name,
@@ -169,19 +164,17 @@ const ModelSelection = ({ isDarkMode, onNext, onPrev, dataset, datasetSchema, ta
                 specificity: "0.00",
                 auc: "0.00",
             });
-            setIsTraining(false);
             if (isInitialLoading) setIsInitialLoading(false);
             return;
         }
 
         setIsTraining(true);
-        
-        // Yield to browser to show spinner
         await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 
         try {
-            const metrics = await runMLTraining(selectedModel, params[selectedModel], dataset, datasetSchema, targetColumn);
+            const metrics = await runMLTraining(selectedModel, params[selectedModel], dataset, datasetSchema, targetColumn, 42);
             
+            // Check if this run is still the latest one
             if (currentTrainId !== trainingIdRef.current) return;
 
             const settingsStr = getSettingsString();
@@ -205,31 +198,46 @@ const ModelSelection = ({ isDarkMode, onNext, onPrev, dataset, datasetSchema, ta
                 });
             }
         } catch (err) {
+            if (currentTrainId !== trainingIdRef.current) return;
             console.error('ML Pipeline Error:', err);
-            if (currentTrainId === trainingIdRef.current) {
-                setTrainError(err.message || 'An unexpected error occurred during training.');
-            }
+            setTrainError(err.message || 'An unexpected error occurred during training.');
         } finally {
             if (currentTrainId === trainingIdRef.current) {
                 setIsTraining(false);
                 if (isInitialLoading) setIsInitialLoading(false);
             }
         }
-    }, [selectedModel, params, dataset, datasetSchema, targetColumn, isTraining, isInitialLoading, setTrainedModelResult]);
+    }, [selectedModel, params, dataset, datasetSchema, targetColumn, setTrainedModelResult]);
+
+    // Targeted dependencies for training
+    const currentModelParams = params[selectedModel];
 
     // Initial training & auto-retrain logic
     useEffect(() => {
-        let timer;
-        if (autoRetrain || isInitialLoading) {
-            const delay = isInitialLoading ? 500 : (selectedModel === 'rf' ? 2200 : 1200);
-            timer = setTimeout(() => {
-                trainModel(true);
-            }, delay);
+        if (!autoRetrain && !isInitialLoading) return;
+
+        // Create a unique key for the current model and its specific parameters
+        const currentParamKey = `${selectedModel}-${JSON.stringify(currentModelParams)}`;
+        
+        // Prevent re-triggering if parameters haven't changed (unless it's the initial load)
+        if (currentParamKey === lastTriggeredRef.current && !isInitialLoading) {
+            return;
         }
+        
+        lastTriggeredRef.current = currentParamKey;
+
+        let timer;
+        const delay = isInitialLoading ? 500 : (selectedModel === 'rf' ? 1200 : 700);
+        timer = setTimeout(() => {
+            trainModel(true);
+        }, delay);
+        
         return () => {
             if (timer) clearTimeout(timer);
         };
-    }, [selectedModel, params, autoRetrain, trainModel, isInitialLoading]);
+        // We exclude trainModel and isInitialLoading to prevent the loading state toggle 
+        // from re-triggering the effect and creating an infinite loop.
+    }, [selectedModel, currentModelParams, autoRetrain]);
 
     const addToComparison = () => {
         if (lastResult) {
@@ -393,7 +401,7 @@ const ModelSelection = ({ isDarkMode, onNext, onPrev, dataset, datasetSchema, ta
                                             onChange={(e) => setParams({ ...params, knn: { ...params.knn, k: Number(e.target.value) } })}
                                             className={`w-full h-2 rounded-lg appearance-none cursor-pointer transition-all ${isDarkMode ? 'bg-slate-700/50' : 'bg-slate-200'}`}
                                             style={{
-                                                background: `linear-gradient(to right, ${primaryStr} ${(params.knn.k / 20) * 100}%, ${isDarkMode ? '#334155' : '#e2e8f0'} ${(params.knn.k / 20) * 100}%)`,
+                                                background: `linear-gradient(to right, ${primaryStr} ${((params.knn.k - 1) / 19) * 100}%, ${isDarkMode ? '#334155' : '#e2e8f0'} ${((params.knn.k - 1) / 19) * 100}%)`,
                                                 accentColor: primaryStr
                                             }}
                                         />
@@ -437,7 +445,7 @@ const ModelSelection = ({ isDarkMode, onNext, onPrev, dataset, datasetSchema, ta
                                             onChange={(e) => setParams({ ...params, svm: { ...params.svm, c: Number(e.target.value) } })}
                                             className={`w-full h-2 rounded-lg appearance-none cursor-pointer transition-all ${isDarkMode ? 'bg-slate-700/50' : 'bg-slate-200'}`}
                                             style={{
-                                                background: `linear-gradient(to right, ${primaryStr} ${(params.svm.c / 10) * 100}%, ${isDarkMode ? '#334155' : '#e2e8f0'} ${(params.svm.c / 10) * 100}%)`,
+                                                background: `linear-gradient(to right, ${primaryStr} ${((params.svm.c - 0.1) / 9.9) * 100}%, ${isDarkMode ? '#334155' : '#e2e8f0'} ${((params.svm.c - 0.1) / 9.9) * 100}%)`,
                                                 accentColor: primaryStr
                                             }}
                                         />
@@ -480,7 +488,7 @@ const ModelSelection = ({ isDarkMode, onNext, onPrev, dataset, datasetSchema, ta
                                         onChange={(e) => setParams({ ...params, dt: { ...params.dt, maxDepth: Number(e.target.value) } })}
                                         className={`w-full h-2 rounded-lg appearance-none cursor-pointer transition-all ${isDarkMode ? 'bg-slate-700/50' : 'bg-slate-200'}`}
                                         style={{
-                                            background: `linear-gradient(to right, ${primaryStr} ${(params.dt.maxDepth / 10) * 100}%, ${isDarkMode ? '#334155' : '#e2e8f0'} ${(params.dt.maxDepth / 10) * 100}%)`,
+                                            background: `linear-gradient(to right, ${primaryStr} ${((params.dt.maxDepth - 1) / 9) * 100}%, ${isDarkMode ? '#334155' : '#e2e8f0'} ${((params.dt.maxDepth - 1) / 9) * 100}%)`,
                                             accentColor: primaryStr
                                         }}
                                     />
@@ -507,7 +515,7 @@ const ModelSelection = ({ isDarkMode, onNext, onPrev, dataset, datasetSchema, ta
                                         onChange={(e) => setParams({ ...params, rf: { ...params.rf, trees: Number(e.target.value) } })}
                                         className={`w-full h-2 rounded-lg appearance-none cursor-pointer transition-all ${isDarkMode ? 'bg-slate-700/50' : 'bg-slate-200'}`}
                                         style={{
-                                            background: `linear-gradient(to right, ${primaryStr} ${(params.rf.trees / 200) * 100}%, ${isDarkMode ? '#334155' : '#e2e8f0'} ${(params.rf.trees / 200) * 100}%)`,
+                                            background: `linear-gradient(to right, ${primaryStr} ${((params.rf.trees - 10) / 190) * 100}%, ${isDarkMode ? '#334155' : '#e2e8f0'} ${((params.rf.trees - 10) / 190) * 100}%)`,
                                             accentColor: primaryStr
                                         }}
                                     />
@@ -534,7 +542,7 @@ const ModelSelection = ({ isDarkMode, onNext, onPrev, dataset, datasetSchema, ta
                                         onChange={(e) => setParams({ ...params, lr: { ...params.lr, c: Number(e.target.value) } })}
                                         className={`w-full h-2 rounded-lg appearance-none cursor-pointer transition-all ${isDarkMode ? 'bg-slate-700/50' : 'bg-slate-200'}`}
                                         style={{
-                                            background: `linear-gradient(to right, ${primaryStr} ${(params.lr.c / 5) * 100}%, ${isDarkMode ? '#334155' : '#e2e8f0'} ${(params.lr.c / 5) * 100}%)`,
+                                            background: `linear-gradient(to right, ${primaryStr} ${((params.lr.c - 0.01) / 4.99) * 100}%, ${isDarkMode ? '#334155' : '#e2e8f0'} ${((params.lr.c - 0.01) / 4.99) * 100}%)`,
                                             accentColor: primaryStr
                                         }}
                                     />

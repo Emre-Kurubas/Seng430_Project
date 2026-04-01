@@ -601,7 +601,7 @@ const DTViz = React.memo(({ params, datasetSchema, targetColumn, primaryStr, sec
 
     const w = dims.w;
     const h = dims.h;
-    const depth = Math.min(maxDepth, 5);
+    const depth = Math.min(maxDepth, 6);
 
     const treeData = useMemo(() => {
         const trees = {
@@ -667,6 +667,27 @@ const DTViz = React.memo(({ params, datasetSchema, targetColumn, primaryStr, sec
                 { x: 11 * w / 32, y: 220, label: 'SAFE\n71%', color: COLORS.green },
                 { x: w / 64, y: 270, label: 'READMIT\n99%', color: COLORS.red },
                 { x: 3 * w / 64, y: 270, label: 'READMIT\n96%', color: COLORS.red },
+            ],
+            6: [
+                { x: w / 2, y: 15, label: `${fNames[0]}\n< val?`, isQ: true },
+                { x: w / 4, y: 55, label: `${fNames[1]}\n> val?`, isQ: true },
+                { x: 3 * w / 4, y: 55, label: `${fNames[2]}\n> val?`, isQ: true },
+                { x: w / 8, y: 95, label: `${fNames[3]}\nYes?`, isQ: true },
+                { x: 3 * w / 8, y: 95, label: `${fNames[0]}\n< val?`, isQ: true },
+                { x: 5 * w / 8, y: 95, label: `${tName}\n72%`, color: COLORS.red },
+                { x: 7 * w / 8, y: 95, label: 'SAFE\n96%', color: COLORS.green },
+                { x: w / 16, y: 135, label: `${fNames[1] || 'F4'}\n> val?`, isQ: true },
+                { x: 3 * w / 16, y: 135, label: `${tName}\n88%`, color: COLORS.red },
+                { x: 5 * w / 16, y: 135, label: `${fNames[2] || 'F5'}\n> val?`, isQ: true },
+                { x: 7 * w / 16, y: 135, label: 'SAFE\n65%', color: COLORS.green },
+                { x: w / 32, y: 175, label: `${fNames[3] || 'F6'}\nYes?`, isQ: true },
+                { x: 3 * w / 32, y: 175, label: 'READMIT\n94%', color: COLORS.red },
+                { x: 5 * w / 32, y: 175, label: 'READMIT\n91%', color: COLORS.red },
+                { x: 7 * w / 32, y: 175, label: 'SAFE\n68%', color: COLORS.green },
+                { x: w / 64, y: 215, label: `${fNames[0] || 'F1'}\n< val?`, isQ: true },
+                { x: 3 * w / 64, y: 215, label: 'READMIT\n96%', color: COLORS.red },
+                { x: w / 128, y: 255, label: 'READMIT\n99%', color: COLORS.red },
+                { x: 3 * w / 128, y: 255, label: 'READMIT\n98%', color: COLORS.red },
             ],
         };
         return trees[depth] || trees[3];
@@ -745,7 +766,7 @@ const DTViz = React.memo(({ params, datasetSchema, targetColumn, primaryStr, sec
             </svg>
             <div style={{ ...bannerStyle, background: `${secondaryStr}15`, borderColor: secondaryStr, color: secondaryStr }}>
                 <span style={{ fontSize: 16, flex: '0 0 auto', marginTop: 1 }}>✅</span>
-                <div><b style={{color: secondaryStr}}>Clinical meaning:</b> This looks like a clinical guideline flowchart. The first question ({fNames[0]}) is the most important split — the model identified this as the strongest predictor.</div>
+                <div><b style={{color: secondaryStr}}>Clinical meaning:</b> With a depth of {maxDepth}, the model creates {Math.pow(2, Math.min(maxDepth, 4))} individual decision paths. The first split ({fNames[0]}) remains the most critical clinical indicator. {maxDepth > 5 ? 'A high depth might over-specialize on historical edge-cases.' : 'A balanced depth provides a generalizable clinical guideline.'}</div>
             </div>
         </div>
     );
