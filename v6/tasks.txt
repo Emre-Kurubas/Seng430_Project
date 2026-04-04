@@ -1,5 +1,0 @@
-1. Aşama 2de garip Class Balance — Distribution of "Target" kısmı düzeltilecek.
-2. Aşama 2de upload csv kısmına guideline eklenecek.
-3. Aşama 4 komple düzeltilecek.
-4. Logo bakılabilir.
-5. Dataset içinde oransızlıklar var.
