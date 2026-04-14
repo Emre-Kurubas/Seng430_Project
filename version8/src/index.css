@@ -1,0 +1,430 @@
+/* Google Fonts — MUST be first */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap');
+
+/* Tailwind */
+@import "tailwindcss";
+@config "../tailwind.config.js";
+
+/* ═══════════════════════════════════════════════════════════════
+   HEALTH-AI ML TOOL — Global Styles
+   Clean, professional design system
+═══════════════════════════════════════════════════════════════ */
+
+/* ─── CSS Custom Properties ─────────────────────────────────── */
+:root {
+    --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+    --font-heading: 'Outfit', ui-sans-serif, system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+/* ─── Base ───────────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    cursor: url('/cursor.svg') 5 5, auto;
+}
+
+a,
+button,
+[role="button"],
+.cursor-pointer,
+.interactive-card,
+a *,
+button *,
+[role="button"] *,
+.cursor-pointer *,
+.interactive-card * {
+    cursor: url('/cursor-pointer.svg') 10 10, pointer !important;
+}
+
+/* ── Interactive Premium Grid Background ── */
+.bg-dot-premium {
+    background-image: radial-gradient(rgba(99, 102, 241, 0.15) 1px, transparent 1px);
+    background-size: 24px 24px;
+}
+
+.dark .bg-dot-premium {
+    background-image: radial-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px);
+}
+
+p,
+span,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+label,
+input,
+textarea {
+    cursor: url('/cursor-text.svg') 16 16, text;
+}
+
+.wait,
+.loading,
+[aria-busy="true"] {
+    cursor: url('/cursor-wait.svg') 16 16, wait !important;
+}
+
+.cursor-grab,
+.cursor-grabbing,
+.cursor-all-scroll,
+[style*="cursor: grab"],
+[style*="cursor: grabbing"],
+[style*="cursor: all-scroll"] {
+    cursor: url('/cursor-scroll.svg') 16 16, all-scroll !important;
+}
+
+body.is-panning * {
+    cursor: url('/cursor-scroll.svg') 16 16, all-scroll !important;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+/* ── Custom Scrollbars ── */
+::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f8fafc;
+}
+
+::-webkit-scrollbar-thumb {
+    background-color: #cbd5e1;
+    border-radius: 6px;
+    border: 3px solid #f8fafc;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background-color: #94a3b8;
+}
+
+/* Dark Mode Custom Scrollbars */
+.dark ::-webkit-scrollbar-track {
+    background: #0f172a;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+    background-color: #334155;
+    border: 3px solid #0f172a;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+    background-color: #475569;
+}
+
+/* Firefox Support */
+html {
+    scrollbar-color: #cbd5e1 #f8fafc;
+    scrollbar-width: auto;
+}
+
+html.dark {
+    scrollbar-color: #334155 #0f172a;
+}
+
+html,
+body,
+#root {
+    height: 100%;
+    font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    font-family: 'Outfit', ui-sans-serif, system-ui, sans-serif;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+/* ─── Custom Scrollbar ───────────────────────────────────────── */
+html.dark {
+    color-scheme: dark;
+}
+
+/* Firefox */
+* {
+    scrollbar-width: auto;
+    scrollbar-color: rgba(148, 163, 184, 0.4) transparent;
+}
+
+.dark * {
+    scrollbar-color: rgba(71, 85, 105, 0.6) transparent;
+}
+
+/* Webkit / Chrome / Edge */
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.35);
+    border-radius: 99px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+    min-height: 40px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(148, 163, 184, 0.55);
+    border: 2px solid transparent;
+    background-clip: padding-box;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+    background: rgba(71, 85, 105, 0.6);
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+    background: rgba(71, 85, 105, 0.8);
+}
+
+/* ─── Selection ──────────────────────────────────────────────── */
+::selection {
+    background: rgba(99, 102, 241, 0.15);
+    color: inherit;
+}
+
+/* ─── No-Scrollbar Utility ───────────────────────────────────── */
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+
+.no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+/* ─── Animations (subtle only) ───────────────────────────────── */
+@keyframes pulse-slow {
+
+    0%,
+    100% {
+        opacity: 0.3;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 0.5;
+        transform: scale(1.03);
+    }
+}
+
+@keyframes float {
+
+    0%,
+    100% {
+        transform: translateY(0px);
+    }
+
+    50% {
+        transform: translateY(-6px);
+    }
+}
+
+.animate-pulse-slow {
+    animation: pulse-slow 9s ease-in-out infinite;
+}
+
+.animate-float {
+    animation: float 6s ease-in-out infinite;
+}
+
+/* ─── Card styles ────────────────────────────────────────────── */
+.card-lift {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+/* ─── Focus ring ─────────────────────────────────────────────── */
+*:focus-visible {
+    outline: 2px solid rgba(99, 102, 241, 0.45);
+    outline-offset: 2px;
+}
+
+/* ─── Range input ────────────────────────────────────────────── */
+input[type='range'] {
+    -webkit-appearance: none;
+    appearance: none;
+    cursor: pointer;
+}
+
+input[type='range']::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    margin-top: -6px;
+    border-radius: 50%;
+    background: #6366f1;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+    transition: transform 0.15s;
+}
+
+input[type='range']::-webkit-slider-thumb:hover {
+    transform: scale(1.15);
+}
+
+input[type='range']::-webkit-slider-runnable-track {
+    height: 4px;
+    border-radius: 99px;
+}
+
+/* ─── Mobile Responsiveness ──────────────────────────────── */
+body {
+    overflow-x: hidden;
+}
+
+@media (max-width: 640px) {
+    button {
+        min-height: 36px;
+    }
+
+    .overflow-x-auto {
+        -webkit-overflow-scrolling: touch;
+    }
+}
+
+/* Fix text overflow in narrow containers */
+.truncate-mobile {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Safe area insets for notched phones */
+@supports (padding: max(0px)) {
+    .safe-bottom {
+        padding-bottom: max(16px, env(safe-area-inset-bottom));
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CLEAN CARD SYSTEM (replaces glassmorphism)
+═══════════════════════════════════════════════════════════════ */
+
+/* Dark mode cards */
+.glass-depth-1 {
+    background: #1e293b;
+    border: 1px solid #334155;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.glass-depth-2 {
+    background: #1e293b;
+    border: 1px solid #334155;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* Light mode cards — tinted backgrounds for visual contrast */
+.glass-depth-light-1 {
+    background: linear-gradient(135deg, #eef2ff 0%, #f5f3ff 100%);
+    border: 1px solid #c7d2fe;
+    box-shadow: 0 1px 3px rgba(99, 102, 241, 0.08);
+}
+
+.glass-depth-light-2 {
+    background: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%);
+    border: 1px solid #a7f3d0;
+    box-shadow: 0 1px 2px rgba(16, 185, 129, 0.08);
+}
+
+/* ─── Step Header Accent (simple solid bar) ──────────────────── */
+.step-accent {
+    position: relative;
+    overflow: hidden;
+}
+
+.step-accent::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: #6366f1;
+}
+
+/* ─── Progress Bar (simple, no glow) ─────────────────────────── */
+.progress-glow {
+    position: relative;
+}
+
+/* ─── Feature Bar Hover ──────────────────────────────────────── */
+.feature-bar-container:hover .feature-bar-fill {
+    opacity: 0.9;
+}
+
+.feature-bar-container:hover {
+    transform: translateX(2px);
+    transition: transform 0.2s ease;
+}
+
+.feature-bar-container {
+    transition: transform 0.2s ease;
+}
+
+/* ─── Feature Bar ────────────────────────────────────────────── */
+.feature-gradient-bar {
+    background: #6366f1;
+}
+
+/* ─── Footer Border ──────────────────────────────────────────── */
+.footer-glow {
+    position: relative;
+}
+
+.footer-glow::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 5%;
+    right: 5%;
+    height: 1px;
+    background: #e2e8f0;
+}
+
+/* ─── Gradient text (kept but simplified) ────────────────────── */
+.gradient-text {
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* ─── Deprecated class stubs (prevent breakage) ──────────────── */
+.shimmer {}
+
+.step-number-glow {}
+
+.animate-border-glow {}
+
+.card-inner-shine {}
+
+.particle {
+    display: none;
+}
+
+.metric-value-glow {}
