@@ -774,7 +774,7 @@ const RFViz = React.memo(({ params, isDarkMode, datasetSchema, targetColumn, pri
 const LRViz = React.memo(({ params, isDarkMode, datasetSchema, targetColumn, primaryStr, secondaryStr }) => {
     const canvasRef = useRef(null);
     const COLORS = getColors(isDarkMode);
-    const { c } = params.lr;
+    const { iterations } = params.lr;
     const fNames = getFeatureNames(datasetSchema);
     const tName = targetColumn || 'Outcome';
 
@@ -782,6 +782,8 @@ const LRViz = React.memo(({ params, isDarkMode, datasetSchema, targetColumn, pri
     const xMin = 14;
     const xMax = 80;
     const x0 = 52;
+    // Derive steepness from iterations: more iterations → steeper/more confident sigmoid
+    const c = 0.5 + (iterations / 5000) * 4.5; // maps 100..5000 → 0.5..5.0
     const kFactor = c * 0.2;
     const sigmoid = useCallback((ef) => 1 / (1 + Math.exp(-kFactor * (x0 - ef))), [kFactor]);
     const patientProb = sigmoid(patientEF);
@@ -914,9 +916,9 @@ const LRViz = React.memo(({ params, isDarkMode, datasetSchema, targetColumn, pri
 
     const clinicalExplanation = useMemo(() => {
         if (patientPct >= 75) return `Patient with ${fNames[0]}=${patientEF} is in the high-risk zone (${patientPct}%). The steep curve means small changes cause large swings — a critical intervention point.`;
-        if (patientPct >= 55) return `Patient with ${fNames[0]}=${patientEF} is on the steep part (${patientPct}% risk). At C=${c.toFixed(0)}, moderately confident — further investigation warranted.`;
-        return `Patient with ${fNames[0]}=${patientEF} shows moderate risk (${patientPct}%). With low regularisation (C=${c.toFixed(0)}), the flatter curve reflects a conservative prediction.`;
-    }, [patientPct, fNames, c, patientEF]);
+        if (patientPct >= 55) return `Patient with ${fNames[0]}=${patientEF} is on the steep part (${patientPct}% risk). At ${iterations} iterations, moderately confident — further investigation warranted.`;
+        return `Patient with ${fNames[0]}=${patientEF} shows moderate risk (${patientPct}%). With fewer iterations (${iterations}), the flatter curve reflects a conservative prediction.`;
+    }, [patientPct, fNames, iterations, patientEF]);
 
     return (
         <div>

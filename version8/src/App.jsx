@@ -60,7 +60,7 @@ function App() {
   const [datasetSchema, setDatasetSchema] = useState([]);
   const [targetColumn, setTargetColumn] = useState('');
   const [trainedModelResult, setTrainedModelResult] = useState(null);
-  
+
   // Model Comparison State (lifted here so it persists when returning from Step 5 to Step 4)
   const [comparisonList, setComparisonList] = useState([]);
 
@@ -73,7 +73,7 @@ function App() {
     const handlePointerDown = (e) => {
       // 1 is the middle mouse button
       if (e.button === 1) {
-        e.preventDefault(); 
+        e.preventDefault();
         isPanning = true;
         startY = e.clientY;
         currentScrollY = window.scrollY;
@@ -194,9 +194,9 @@ function App() {
     }
   };
 
-  const sharedProps = { 
-    isDarkMode, 
-    onNext: handleNextStep, 
+  const sharedProps = {
+    isDarkMode,
+    onNext: handleNextStep,
     onPrev: handlePrevStep,
     onGoToStep: handleGoToStep,
     dataset, setDataset,
@@ -217,11 +217,11 @@ function App() {
       {/* ── INTERACTIVE DOT BACKGROUND ─────────────────────────── */}
       <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
         <InteractiveDotBackground isDarkMode={isDarkMode} />
-        
+
         {/* Soft, diffuse radial glows in the corners to create depth */}
         <div className="absolute inset-0" style={{ backgroundImage: `radial-gradient(circle at top right, ${isDarkMode ? 'rgba(99, 102, 241, 0.08)' : 'rgba(99, 102, 241, 0.05)'}, transparent 55%)` }} />
         <div className="absolute inset-0" style={{ backgroundImage: `radial-gradient(circle at bottom left, ${isDarkMode ? 'rgba(139, 92, 246, 0.06)' : 'rgba(139, 92, 246, 0.04)'}, transparent 55%)` }} />
-        
+
         {/* Soft gradient fade masking the bottom */}
         <div className="absolute inset-0" style={{ backgroundImage: `linear-gradient(to bottom, transparent 30%, ${isDarkMode ? '#0f172a' : '#f1f5f9'} 100%)` }} />
       </div>
@@ -251,11 +251,10 @@ function App() {
               <div className="flex flex-col lg:flex-row w-full">
                 {/* ── LEFT SIDEBAR (Collapsible) ── */}
                 <aside
-                  className={`shrink-0 flex flex-col lg:sticky lg:top-[62px] lg:h-[calc(100vh-62px)] lg:overflow-y-auto no-scrollbar border-b lg:border-b-0 lg:border-r pt-2 lg:pt-3 pb-6 transition-all duration-300 ease-in-out ${isDarkMode ? 'bg-slate-800/50 border-slate-800' : 'bg-white border border-slate-200 shadow-md/60'} ${
-                    sidebarCollapsed
-                      ? 'w-full lg:w-[52px] px-2'
-                      : 'w-full lg:w-[260px] 2xl:w-[280px] px-4 lg:px-6'
-                  }`}
+                  className={`shrink-0 flex flex-col lg:sticky lg:top-[62px] lg:h-[calc(100vh-62px)] lg:overflow-y-auto no-scrollbar border-b lg:border-b-0 lg:border-r pt-2 lg:pt-3 pb-6 transition-all duration-300 ease-in-out ${isDarkMode ? 'bg-slate-800/50 border-slate-800' : 'bg-white border border-slate-200 shadow-md/60'} ${sidebarCollapsed
+                    ? 'w-full lg:w-[52px] px-2'
+                    : 'w-full lg:w-[260px] 2xl:w-[280px] px-4 lg:px-6'
+                    }`}
                 >
                   {/* Collapse / Expand Toggle (desktop only) */}
                   <div className="hidden lg:flex justify-end mb-1">
