@@ -562,7 +562,7 @@ const generateCertificate = async ({ checked, subgroups, domain, trainedModelRes
 
     doc.setFont('helvetica', 'italic');
     doc.setFontSize(7);
-    doc.text('Prepared by Dr. Sevgi Koyuncu Tunç  ·  ML Visualization Tool  ·  SENG 430', margin, y);
+    doc.text('Prepared by Health Code Team  ·  ML Visualization Tool  ·  SENG 430', margin, y);
 
     // Bottom accent bar on every page
     const totalPages = doc.internal.getNumberOfPages();
