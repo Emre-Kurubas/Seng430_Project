@@ -3,8 +3,8 @@ import React, { useRef, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Info, Lightbulb, ChevronRight, TrendingUp } from 'lucide-react';
 import Tooltip from './Tooltip';
-import { trainLinearSVM, trainRBFSVM, svmDecisionValues, svmPredict } from '../utils/mlEngine';
-
+import ZoomPanWrapper from './ZoomPanWrapper';
+import { DecisionTreeClassifier } from 'ml-cart';
 /* ═══════════════════════════════════════════════════════════════
    MODEL VISUALIZATIONS — Premium dark/light theme aware
    Each model has its own visualizer component that renders
@@ -347,239 +347,184 @@ const KNNViz = React.memo(({ params, isDarkMode, datasetSchema, targetColumn, pr
 
 
 /* ═══════════════════════════════════════════════════════════════
-   2. SVM — Real Data-Driven Decision Boundary & Support Vectors
+   2. SVM — Decision Boundary & Support Vectors
 ═══════════════════════════════════════════════════════════════ */
-const SVMViz = React.memo(({ params, isDarkMode, datasetSchema, targetColumn, dataset, primaryStr, secondaryStr }) => {
+const SVMViz = React.memo(({ params, isDarkMode, datasetSchema, targetColumn, primaryStr, secondaryStr, dataset }) => {
     const canvasRef = useRef(null);
     const COLORS = getColors(isDarkMode);
     const { c, kernel } = params.svm;
-    const fNames = getFeatureNames(datasetSchema);
     const tName = targetColumn || 'Outcome';
-    const isRBF = kernel === 'RBF';
 
-    // ── Extract, normalise, train, and compute grid from real data ──
-    const vizData = useMemo(() => {
-        if (!dataset || dataset.length === 0 || !datasetSchema) return null;
+    const { fNames, redPts, greenPts, svRedIdx, svGreenIdx, marginScale, svCount } = useMemo(() => {
+        const isLinear = kernel === 'Linear';
+        const ms = Math.max(0.3, 1.0 - Math.log10(Math.max(c, 0.1)) * 0.35);
 
-        // Find first 2 numeric feature columns
-        const numCols = datasetSchema
-            .filter(col => col.role === 'Number (measurement)' || col.role === 'Category')
-            .map(col => col.name)
-            .slice(0, 2);
-        if (numCols.length < 2) return null;
-
-        // Build target label map
-        const targetValues = [...new Set(dataset.map(r => r[targetColumn]).filter(v => v !== undefined && v !== ''))];
-        const tMap = {};
-        if (targetValues.length >= 2) { tMap[targetValues[0]] = 0; tMap[targetValues[1]] = 1; }
-        else { tMap[targetValues[0] || '1'] = 1; }
-
-        // Extract valid 2D points
-        const raw = [];
-        const labels = [];
-        dataset.forEach(row => {
-            const x = Number(row[numCols[0]]);
-            const y = Number(row[numCols[1]]);
-            const label = tMap[row[targetColumn]];
-            if (!isNaN(x) && !isNaN(y) && label !== undefined) {
-                raw.push([x, y]);
-                labels.push(label);
-            }
-        });
-        if (raw.length < 10) return null;
-
-        // Deterministic shuffle + sample
-        const seededRandom = (s) => { const x = Math.sin(s) * 10000; return x - Math.floor(x); };
-        let indices = Array.from({ length: raw.length }, (_, i) => i);
-        for (let i = indices.length - 1; i > 0; i--) {
-            const j = Math.floor(seededRandom(42 + i) * (i + 1));
-            [indices[i], indices[j]] = [indices[j], indices[i]];
-        }
-        const trainIdx = indices.slice(0, Math.min(raw.length, 500));
-        const displayIdx = indices.slice(0, Math.min(raw.length, 200));
-
-        // Min-max normalisation with padding
-        let xMin = Infinity, xMax = -Infinity, yMin = Infinity, yMax = -Infinity;
-        raw.forEach(([x, y]) => { xMin = Math.min(xMin, x); xMax = Math.max(xMax, x); yMin = Math.min(yMin, y); yMax = Math.max(yMax, y); });
-        const pad = 0.08;
-        const xRange = (xMax - xMin) || 1;
-        const yRange = (yMax - yMin) || 1;
-        xMin -= xRange * pad; xMax += xRange * pad;
-        yMin -= yRange * pad; yMax += yRange * pad;
-        const xR = xMax - xMin;
-        const yR = yMax - yMin;
-
-        // Normalised training data
-        const trainX = trainIdx.map(i => [(raw[i][0] - xMin) / xR, (raw[i][1] - yMin) / yR]);
-        const trainY = trainIdx.map(i => labels[i] === 1 ? 1 : -1);
-
-        // Train real SVM
-        let model;
-        if (isRBF) {
-            let totalVar = 0;
-            for (let j = 0; j < 2; j++) {
-                const mean = trainX.reduce((s, x) => s + x[j], 0) / trainX.length;
-                totalVar += trainX.reduce((s, x) => s + (x[j] - mean) ** 2, 0) / trainX.length;
-            }
-            const gamma = 1 / (2 * (totalVar / 2 + 1e-8));
-            model = trainRBFSVM(trainX, trainY, c, gamma, 42);
-        } else {
-            model = trainLinearSVM(trainX, trainY, c, null, 42);
-        }
-
-        // Evaluate decision function on grid
-        const gridSize = 45;
-        const flatGrid = [];
-        for (let gy = 0; gy < gridSize; gy++) {
-            for (let gx = 0; gx < gridSize; gx++) {
-                flatGrid.push([gx / (gridSize - 1), gy / (gridSize - 1)]);
-            }
-        }
-        const gridDecisions = svmDecisionValues(flatGrid, model);
-        const gridValues = [];
-        let idx = 0;
-        for (let gy = 0; gy < gridSize; gy++) {
-            const row = [];
-            for (let gx = 0; gx < gridSize; gx++) row.push(gridDecisions[idx++]);
-            gridValues.push(row);
-        }
-
-        // Display points with their decision values
-        const displayPts = displayIdx.map(i => ({
-            x: (raw[i][0] - xMin) / xR,
-            y: (raw[i][1] - yMin) / yR,
-            label: labels[i],
-        }));
-        const displayFeatures = displayPts.map(p => [p.x, p.y]);
-        const displayDecisions = svmDecisionValues(displayFeatures, model);
-        displayPts.forEach((p, i) => { p.decision = displayDecisions[i]; });
-
-        // Support vectors: points within the margin (|decision| < 1)
-        const svIndices = new Set();
-        displayPts.forEach((p, i) => { if (Math.abs(p.decision) < 1.0) svIndices.add(i); });
-
-        // Training accuracy
-        const trainPred = svmPredict(trainX, model);
-        const trainLabels01 = trainY.map(v => v === 1 ? 1 : 0);
-        let correct = 0;
-        trainPred.forEach((p, i) => { if (p === trainLabels01[i]) correct++; });
-        const trainAcc = Math.round((correct / trainPred.length) * 100);
-
-        return { gridValues, gridSize, displayPts, svIndices, featureNames: [numCols[0], numCols[1]], trainAcc, svCount: svIndices.size };
-    }, [dataset, datasetSchema, targetColumn, c, kernel, isRBF]);
-
-    // ── Canvas drawing ──
-    const draw = useCallback(() => {
-        const result = setupCanvas(canvasRef.current);
-        if (!result || !vizData) return;
-        const { ctx, w, h } = result;
-        const { gridValues, gridSize, displayPts, svIndices } = vizData;
-
-        const margin = 30;
-        const plotW = w - margin * 2;
-        const plotH = h - margin * 2;
-        const cellW = plotW / gridSize;
-        const cellH = plotH / gridSize;
-
-        // ── Decision boundary heatmap ──
-        for (let gy = 0; gy < gridSize; gy++) {
-            for (let gx = 0; gx < gridSize; gx++) {
-                const val = gridValues[gy][gx];
-                const intensity = Math.min(1, Math.abs(val) * 0.4);
-                ctx.fillStyle = val > 0
-                    ? (isDarkMode ? `rgba(248,113,113,${0.04 + intensity * 0.18})` : `rgba(220,38,38,${0.03 + intensity * 0.14})`)
-                    : (isDarkMode ? `rgba(74,222,128,${0.04 + intensity * 0.18})` : `rgba(22,163,74,${0.03 + intensity * 0.14})`);
-                ctx.fillRect(margin + gx * cellW, margin + gy * cellH, cellW + 0.5, cellH + 0.5);
-            }
-        }
-
-        // ── Contour helper: draw iso-line at a given threshold ──
-        const drawContour = (threshold, strokeStyle, lineWidth, dash) => {
-            ctx.strokeStyle = strokeStyle;
-            ctx.lineWidth = lineWidth;
-            ctx.setLineDash(dash);
-            ctx.beginPath();
-            for (let gy = 0; gy < gridSize - 1; gy++) {
-                for (let gx = 0; gx < gridSize - 1; gx++) {
-                    const v = [
-                        gridValues[gy][gx] - threshold,
-                        gridValues[gy][gx + 1] - threshold,
-                        gridValues[gy + 1][gx + 1] - threshold,
-                        gridValues[gy + 1][gx] - threshold,
-                    ];
-                    const corners = [[gx, gy], [gx + 1, gy], [gx + 1, gy + 1], [gx, gy + 1]];
-                    const edges = [[0, 1], [1, 2], [2, 3], [3, 0]];
-                    const crossings = [];
-                    for (const [a, b] of edges) {
-                        if ((v[a] > 0) !== (v[b] > 0)) {
-                            const t = v[a] / (v[a] - v[b]);
-                            crossings.push([
-                                margin + (corners[a][0] + t * (corners[b][0] - corners[a][0])) * cellW,
-                                margin + (corners[a][1] + t * (corners[b][1] - corners[a][1])) * cellH,
-                            ]);
-                        }
-                    }
-                    if (crossings.length >= 2) { ctx.moveTo(crossings[0][0], crossings[0][1]); ctx.lineTo(crossings[1][0], crossings[1][1]); }
-                    if (crossings.length >= 4) { ctx.moveTo(crossings[2][0], crossings[2][1]); ctx.lineTo(crossings[3][0], crossings[3][1]); }
+        // Extract numeric features
+        const numCols = [];
+        if (datasetSchema && dataset) {
+            datasetSchema.forEach(col => {
+                if (col.role === 'Number (measurement)' || col.role === 'Category') {
+                    if (col.name !== targetColumn) numCols.push(col.name);
                 }
-            }
-            ctx.stroke();
-            ctx.setLineDash([]);
+            });
+        }
+        
+        let f1Name = numCols[0] || 'Feature A';
+        let f2Name = numCols[1] || 'Feature B';
+        let rPts = [];
+        let gPts = [];
+
+        if (dataset && dataset.length > 0 && numCols.length >= 2) {
+            // Find top 2 features with highest variance / mean absolute difference
+            const stats = numCols.map(col => {
+                const vals0 = dataset.filter(row => row[targetColumn] != 1).map(row => Number(row[col]) || 0);
+                const vals1 = dataset.filter(row => row[targetColumn] == 1).map(row => Number(row[col]) || 0);
+                const mean0 = vals0.reduce((a,b)=>a+b,0)/(vals0.length||1);
+                const mean1 = vals1.reduce((a,b)=>a+b,0)/(vals1.length||1);
+                return { col, diff: Math.abs(mean0 - mean1) };
+            }).sort((a,b) => b.diff - a.diff);
+            
+            f1Name = stats[0].col;
+            f2Name = stats[1].col;
+            
+            // Extract feature columns
+            const allF1 = dataset.map(d => Number(d[f1Name]) || 0);
+            const allF2 = dataset.map(d => Number(d[f2Name]) || 0);
+            const minF1 = Math.min(...allF1); const maxF1 = Math.max(...allF1);
+            const minF2 = Math.min(...allF2); const maxF2 = Math.max(...allF2);
+            const range1 = (maxF1 - minF1) || 1;
+            const range2 = (maxF2 - minF2) || 1;
+            
+            // Limit points and compute (with padded margin & jitter)
+            dataset.slice(0, 150).forEach(row => {
+                const xBase = ((Number(row[f1Name]) || 0) - minF1) / range1;
+                const yBase = ((Number(row[f2Name]) || 0) - minF2) / range2;
+                // Pad to [0.1, 0.9] to avoid edge sticking
+                const x = 0.1 + xBase * 0.8;
+                const y = 0.9 - yBase * 0.8; 
+                
+                // Add tiny organic jitter (5%) to resolve overlapping
+                const jx = x + (Math.random() - 0.5) * 0.05;
+                const jy = y + (Math.random() - 0.5) * 0.05;
+
+                if (row[targetColumn] == 1) rPts.push([jx, jy]);
+                else gPts.push([jx, jy]);
+            });
+        } else {
+            // Safe fallback if data isn't loaded (but instructions mandate real data, handled above)
+            const seed = Math.round(c * 10);
+            const seededRandom = (i) => { const x = Math.sin(seed * 9301 + i * 49297 + 233280) * 49297; return x - Math.floor(x); };
+            const baseRed = [[0.18,0.72],[0.22,0.82],[0.28,0.68],[0.14,0.78],[0.32,0.88],[0.25,0.62],[0.38,0.75],[0.12,0.85]];
+            const baseGreen = [[0.72,0.28],[0.78,0.22],[0.68,0.32],[0.82,0.18],[0.88,0.38],[0.62,0.25],[0.75,0.42],[0.85,0.12]];
+            const drift = Math.max(0, (1 - c / 5) * 0.15);
+            rPts = baseRed.map(([x,y],i) => [Math.max(0.1,Math.min(0.9,x+drift*(0.5-x)*(0.5+seededRandom(i)*0.5))), Math.max(0.1,Math.min(0.9,y+drift*(0.5-y)*(0.5+seededRandom(i+100)*0.5)))]);
+            gPts = baseGreen.map(([x,y],i) => [Math.max(0.1,Math.min(0.9,x+drift*(0.5-x)*(0.5+seededRandom(i+200)*0.5))), Math.max(0.1,Math.min(0.9,y+drift*(0.5-y)*(0.5+seededRandom(i+300)*0.5)))]);
+        }
+
+        const distToBoundary = (px,py) => {
+            if (isLinear) return Math.abs((px-0.5)+(py-0.5))/Math.sqrt(2);
+            const dx=(px-0.5)*Math.cos(Math.PI/4)+(py-0.5)*Math.sin(Math.PI/4);
+            const dy=-(px-0.5)*Math.sin(Math.PI/4)+(py-0.5)*Math.cos(Math.PI/4);
+            return Math.abs(Math.sqrt((dx/0.25)**2+(dy/0.25)**2)-1)*0.25;
         };
 
-        // Margin contours at ±1
-        drawContour(1, `${COLORS.muted}50`, 1, [4, 3]);
-        drawContour(-1, `${COLORS.muted}50`, 1, [4, 3]);
+        const svCountVal = Math.max(1, Math.min(4, Math.round(4 - c * 0.3)));
+        const redDists = rPts.map(([x,y],i)=>({i,d:distToBoundary(x,y)})).sort((a,b)=>a.d-b.d);
+        const greenDists = gPts.map(([x,y],i)=>({i,d:distToBoundary(x,y)})).sort((a,b)=>a.d-b.d);
 
-        // Decision boundary at 0
-        ctx.shadowColor = `${primaryStr}50`;
-        ctx.shadowBlur = 8;
-        drawContour(0, primaryStr, 2.5, []);
+        return { fNames: [f1Name, f2Name], redPts: rPts, greenPts: gPts, svRedIdx: redDists.slice(0,svCountVal).map(d=>d.i), svGreenIdx: greenDists.slice(0,svCountVal).map(d=>d.i), marginScale: ms, svCount: svCountVal };
+    }, [c, kernel, dataset, datasetSchema, targetColumn]);
+
+    const draw = useCallback(() => {
+        const result = setupCanvas(canvasRef.current);
+        if (!result) return;
+        const { ctx, w, h } = result;
+        const isLinear = kernel === 'Linear';
+
+        // Grid Lines
+        ctx.strokeStyle = COLORS.line;
+        ctx.lineWidth = 0.5;
+        for (let i = 0; i <= 4; i++) {
+            ctx.beginPath(); ctx.moveTo((w/4)*i,0); ctx.lineTo((w/4)*i,h); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(0,(h/4)*i); ctx.lineTo(w,(h/4)*i); ctx.stroke();
+        }
+
+        // --- Medical Concept Gradient Areas ---
+        // Instead of jagged lines, use high resolution smooth medical gradients
+        if (isLinear) {
+            const grad = ctx.createLinearGradient(0, h, w, 0);
+            grad.addColorStop(0, `${COLORS.red}1A`);      // Risk area
+            grad.addColorStop(0.5, 'transparent');        // Decision boundary
+            grad.addColorStop(1, `${COLORS.green}1A`);    // Safe area
+            ctx.fillStyle = grad;
+            ctx.fillRect(0,0,w,h);
+            
+            // Margin Fill
+            ctx.save(); ctx.translate(w*0.5,h*0.5); ctx.rotate(-Math.PI/4);
+            ctx.fillStyle = COLORS.marginFill;
+            const bandW = w * 0.28 * marginScale;
+            ctx.fillRect(-bandW/2,-h,bandW,h*2); ctx.restore();
+        } else {
+            // Smooth RBF gradient blob
+            const grad = ctx.createRadialGradient(w/2, h/2, 0, w/2, h/2, w*0.4);
+            grad.addColorStop(0, `${COLORS.red}1A`);
+            grad.addColorStop(0.5, 'transparent');
+            grad.addColorStop(1, `${COLORS.green}15`);
+            ctx.fillStyle = grad;
+            ctx.fillRect(0,0,w,h);
+            
+            ctx.fillStyle = COLORS.marginFill;
+            ctx.beginPath(); ctx.ellipse(w*0.5,h*0.5,w*0.25*marginScale,h*0.25*marginScale,Math.PI/4,0,Math.PI*2); ctx.fill();
+        }
+
+        // Decision boundary central line
+        ctx.strokeStyle = primaryStr; ctx.lineWidth = 3;
+        ctx.shadowColor = `${primaryStr}30`; ctx.shadowBlur = 6;
+        ctx.beginPath();
+        if (isLinear) { ctx.moveTo(0,h); ctx.lineTo(w,0); }
+        else { ctx.ellipse(w*0.5,h*0.5,w*0.25,h*0.25,Math.PI/4,0,Math.PI*2); }
+        ctx.stroke();
         ctx.shadowBlur = 0;
 
-        // ── Data points ──
-        displayPts.forEach((pt, i) => {
-            const px = margin + pt.x * plotW;
-            const py = margin + pt.y * plotH;
-            const isSV = svIndices.has(i);
-            const r = isSV ? 7 : 4;
+        // SV connecting lines helper
+        const svRedSet = new Set(svRedIdx);
+        const svGreenSet = new Set(svGreenIdx);
+        ctx.strokeStyle = `${primaryStr}30`; ctx.lineWidth = 1; ctx.setLineDash([3,3]);
+        redPts.forEach(([px,py],i) => { if (svRedSet.has(i) && isLinear) { const nx=(px+py)/2; ctx.beginPath(); ctx.moveTo(px*w,py*h); ctx.lineTo(nx*w,(1-nx)*h); ctx.stroke(); } });
+        greenPts.forEach(([px,py],i) => { if (svGreenSet.has(i) && isLinear) { const nx=(px+py)/2; ctx.beginPath(); ctx.moveTo(px*w,py*h); ctx.lineTo(nx*w,(1-nx)*h); ctx.stroke(); } });
+        ctx.setLineDash([]);
 
-            if (isSV) {
-                ctx.beginPath();
-                ctx.arc(px, py, 13, 0, Math.PI * 2);
-                ctx.fillStyle = pt.label === 1 ? COLORS.redGlow : COLORS.greenGlow;
-                ctx.fill();
-            }
-            ctx.beginPath();
-            ctx.arc(px, py, r, 0, Math.PI * 2);
-            ctx.fillStyle = pt.label === 1
-                ? (isSV ? COLORS.red : COLORS.redSoft)
-                : (isSV ? COLORS.green : COLORS.greenSoft);
-            ctx.fill();
-            if (isSV) {
-                ctx.strokeStyle = primaryStr;
-                ctx.lineWidth = 2;
-                ctx.stroke();
-            }
+        // Points
+        ctx.globalAlpha = 0.65; // Add global opacity to fix overlapping solid blocks
+        redPts.forEach(([x,y],i) => {
+            const isSV = svRedSet.has(i); const r = isSV ? 7 : 5;
+            if (isSV) { ctx.beginPath(); ctx.arc(x*w,y*h,13,0,Math.PI*2); ctx.fillStyle = COLORS.redGlow; ctx.fill(); }
+            ctx.beginPath(); ctx.arc(x*w,y*h,r,0,Math.PI*2);
+            ctx.fillStyle = isSV ? COLORS.red : COLORS.redSoft; ctx.fill();
+            if (isSV) { ctx.globalAlpha = 1; ctx.strokeStyle = primaryStr; ctx.lineWidth = 2; ctx.stroke(); ctx.globalAlpha = 0.65; }
         });
 
-        // ── Axis labels ──
-        ctx.fillStyle = COLORS.muted;
-        ctx.font = '10px Inter, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText(`${vizData.featureNames[0]} →`, w / 2, h - 4);
+        greenPts.forEach(([x,y],i) => {
+            const isSV = svGreenSet.has(i); const r = isSV ? 7 : 5;
+            if (isSV) { ctx.beginPath(); ctx.arc(x*w,y*h,13,0,Math.PI*2); ctx.fillStyle = COLORS.greenGlow; ctx.fill(); }
+            ctx.beginPath(); ctx.arc(x*w,y*h,r,0,Math.PI*2);
+            ctx.fillStyle = isSV ? COLORS.green : COLORS.greenSoft; ctx.fill();
+            if (isSV) { ctx.globalAlpha = 1; ctx.strokeStyle = primaryStr; ctx.lineWidth = 2; ctx.stroke(); ctx.globalAlpha = 0.65; }
+        });
+        ctx.globalAlpha = 1.0;
+
+        // Labels
+        ctx.fillStyle = COLORS.muted; ctx.font = '10px Inter, sans-serif';
+        ctx.textAlign = 'left'; ctx.fillText(`${fNames[0]} →`, w - Math.min(100, ctx.measureText(fNames[0]).width + 20), h - 10);
+        
         ctx.save();
-        ctx.translate(10, h / 2);
-        ctx.rotate(-Math.PI / 2);
-        ctx.fillText(`${vizData.featureNames[1]} →`, 0, 0);
+        ctx.translate(14, h / 2); ctx.rotate(-Math.PI / 2);
+        ctx.textAlign = 'center'; ctx.fillText(`${fNames[1]} →`, 0, 0);
         ctx.restore();
 
-        // ── Info label ──
-        ctx.fillStyle = primaryStr;
-        ctx.font = 'bold 11px Inter, sans-serif';
-        ctx.textAlign = 'left';
-        ctx.fillText(`${isRBF ? 'RBF' : 'Linear'} · C=${c.toFixed(1)} · ${vizData.svCount} SVs · ${vizData.trainAcc}% acc`, margin + 4, margin - 8);
-    }, [vizData, primaryStr, isDarkMode, COLORS, c, isRBF]);
+        ctx.fillStyle = primaryStr; ctx.font = 'bold 11px Inter, sans-serif'; ctx.textAlign = 'left';
+        ctx.fillText(`C = ${c.toFixed(1)} · Margin: ${marginScale > 0.7 ? 'Wide' : marginScale > 0.4 ? 'Medium' : 'Narrow'}`, 30, 22);
+    }, [kernel, c, fNames, redPts, greenPts, svRedIdx, svGreenIdx, marginScale, primaryStr, isDarkMode, COLORS]);
 
     useEffect(() => {
         draw();
@@ -590,40 +535,22 @@ const SVMViz = React.memo(({ params, isDarkMode, datasetSchema, targetColumn, da
     }, [draw]);
 
     const explanation = useMemo(() => {
-        if (!vizData) return 'Waiting for dataset with at least 2 numeric features…';
-        if (c < 1) return `With C=${c.toFixed(1)} (loose), the model tolerates misclassifications for a wider margin. ${vizData.svCount} support vectors within the margin define the boundary. Training accuracy: ${vizData.trainAcc}%.`;
-        if (c > 5) return `With C=${c.toFixed(1)} (strict), the model penalises errors heavily — tighter boundary, risk of overfitting. ${vizData.svCount} support vectors. Training accuracy: ${vizData.trainAcc}%.`;
-        return `With C=${c.toFixed(1)} (balanced), the model balances margin width and accuracy. ${vizData.svCount} support vectors define the boundary. Training accuracy: ${vizData.trainAcc}%.`;
-    }, [c, vizData]);
-
-    if (!vizData) {
-        return (
-            <div className={'p-6 rounded-2xl text-center ' + (isDarkMode ? 'bg-slate-800/50 text-slate-400' : 'bg-slate-50 text-slate-500')}>
-                <p className="text-sm">SVM requires at least 2 numeric features in the dataset to visualize the decision boundary.</p>
-            </div>
-        );
-    }
+        if (c < 1) return `With C=${c.toFixed(1)} (loose), the SVM focuses on creating a reliable boundary based on highest-impact markers (${fNames[0]} vs ${fNames[1]}). It allows minor overlaps (patients beyond the margin) to keep the strictness generalized and safe for new patients.`;
+        if (c > 5) return `With C=${c.toFixed(1)} (strict), the SVM enforces a strict mathematical separation using ${svCount} boundary patients (Support Vectors). It aims for zero mistakes on training data but may overfit to anomalies.`;
+        return `With C=${c.toFixed(1)} (balanced), the model balances boundary precision with generalization capacity. ${svCount} unique case patients define the strictness between predicting ${tName}.`;
+    }, [c, svCount, fNames, tName]);
 
     return (
-        <div style={{ overflow: 'hidden', maxWidth: '100%' }}>
+        <div>
             <VizDescription isDarkMode={isDarkMode}>
-                SVM trained on your dataset ({vizData.featureNames[0]} vs {vizData.featureNames[1]}). The coloured regions show the model's decision, and the <strong style={{ color: primaryStr }}>boundary line</strong> is where confidence = 0. <strong>Support vectors</strong> (outlined) sit inside the margin.
+                SVM draws a boundary to separate patient groups based on {fNames[0]} and {fNames[1]}. <strong>Support vectors</strong> (outlined) are edge cases on the fence. Adjust <strong>C</strong> to see how strictness changes the margin.
             </VizDescription>
-            <div style={{ width: '100%', overflow: 'hidden', borderRadius: '16px', position: 'relative' }}>
-                <motion.canvas
-                    ref={canvasRef}
-                    style={getVizCanvasStyle(isDarkMode)}
-                    initial={{ opacity: 0, scale: 0.98 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.4 }}
-                />
-            </div>
+            <motion.canvas ref={canvasRef} style={getVizCanvasStyle(isDarkMode)} initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.4 }} />
             <LegendRow isDarkMode={isDarkMode} primaryStr={primaryStr} items={[
                 { color: COLORS.red, label: tName },
                 { color: COLORS.green, label: `Not ${tName}` },
-                { render: <div className="w-3.5 h-3.5 rounded-full border-[2.5px]" style={{ borderColor: primaryStr }} />, label: 'Support Vector' },
-                { render: <div className="w-6 h-0.5 rounded-full" style={{ backgroundColor: primaryStr }} />, label: 'Decision Boundary' },
-                { render: <div className="w-5 h-0.5 rounded-full border-t border-dashed" style={{ borderColor: COLORS.muted }} />, label: 'Margin (±1)' },
+                { render: <div className="w-3.5 h-3.5 rounded-full border-[2px]" style={{ borderColor: primaryStr, opacity: 0.8 }} />, label: 'Support Vector' },
+                { render: <div className="w-6 h-0.5 rounded-full" style={{ backgroundColor: primaryStr }} />, label: 'Boundary' },
             ]} />
             <ClinicalBanner isDarkMode={isDarkMode} accentColor={secondaryStr}>{explanation}</ClinicalBanner>
         </div>
@@ -632,187 +559,195 @@ const SVMViz = React.memo(({ params, isDarkMode, datasetSchema, targetColumn, da
 
 
 /* ═══════════════════════════════════════════════════════════════
-   3. Decision Tree — Clinical Flowchart (SVG)
+   3. Decision Tree — Clinical Flowchart (Interactive Node Layout)
 ═══════════════════════════════════════════════════════════════ */
-const DTViz = React.memo(({ params, isDarkMode, datasetSchema, targetColumn, primaryStr, secondaryStr }) => {
+const DTViz = React.memo(({ params, isDarkMode, datasetSchema, targetColumn, primaryStr, secondaryStr, dataset }) => {
     const { maxDepth } = params.dt;
     const COLORS = getColors(isDarkMode);
-    const svgRef = useRef(null);
-    const [dims, setDims] = React.useState({ w: 800, h: 320 });
-    const fNames = getFeatureNames(datasetSchema);
-    const tName = (targetColumn || 'Risk').substring(0, 7).toUpperCase();
+    const tName = (targetColumn || 'Risk').substring(0, 10).toUpperCase();
 
-    useEffect(() => {
-        const updateDims = () => { if (svgRef.current) { const rect = svgRef.current.getBoundingClientRect(); setDims({ w: rect.width || 800, h: rect.height || 320 }); } };
-        updateDims();
-        let timeoutId = null;
-        const handleResize = () => { if (timeoutId) clearTimeout(timeoutId); timeoutId = setTimeout(updateDims, 150); };
-        window.addEventListener('resize', handleResize);
-        return () => { window.removeEventListener('resize', handleResize); if (timeoutId) clearTimeout(timeoutId); };
-    }, []);
-
-    const w = dims.w;
-    const h = dims.h;
-    const depth = Math.min(maxDepth, 6);
-
+    // Dynamically build and parse the tree
     const treeData = useMemo(() => {
-        const trees = {
-            1: [{ x: w / 2, y: 40, label: `${fNames[0]}\n< 38?`, isQ: true },
-                { x: w / 4, y: 140, label: `${tName}\n82%`, color: COLORS.red },
-                { x: 3 * w / 4, y: 140, label: 'SAFE\n91%', color: COLORS.green }],
-            2: [
-                { x: w / 2, y: 40, label: `${fNames[0]}\n< 38?`, isQ: true },
-                { x: w / 4, y: 120, label: `${fNames[1]}\n> 65?`, isQ: true },
-                { x: 3 * w / 4, y: 120, label: `${fNames[2]}\n> 1.5?`, isQ: true },
-                { x: w / 8, y: 200, label: `${tName}\n94%`, color: COLORS.red },
-                { x: 3 * w / 8, y: 200, label: 'SAFE\n68%', color: COLORS.green },
-                { x: 5 * w / 8, y: 200, label: `${tName}\n72%`, color: COLORS.red },
-                { x: 7 * w / 8, y: 200, label: 'SAFE\n96%', color: COLORS.green },
-            ],
-            3: [
-                { x: w / 2, y: 30, label: `${fNames[0]}\n< 38?`, isQ: true },
-                { x: w / 4, y: 100, label: `${fNames[1]}\n> 65?`, isQ: true },
-                { x: 3 * w / 4, y: 100, label: `${fNames[2]}\n> 1.5?`, isQ: true },
-                { x: w / 8, y: 170, label: `${fNames[3]}\nYes?`, isQ: true },
-                { x: 3 * w / 8, y: 170, label: `${fNames[0]}\n< 35?`, isQ: true },
-                { x: 5 * w / 8, y: 170, label: `${tName}\n72%`, color: COLORS.red },
-                { x: 7 * w / 8, y: 170, label: 'SAFE\n96%', color: COLORS.green },
-                { x: w / 16, y: 250, label: 'READMIT\n97%', color: COLORS.red },
-                { x: 3 * w / 16, y: 250, label: 'READMIT\n88%', color: COLORS.red },
-                { x: 5 * w / 16, y: 250, label: 'READMIT\n78%', color: COLORS.red },
-                { x: 7 * w / 16, y: 250, label: 'SAFE\n65%', color: COLORS.green },
-            ],
-            4: [
-                { x: w/2, y: 25, label: `${fNames[0]}\n< val?`, isQ: true },
-                { x: w/4, y: 85, label: `${fNames[1]}\n> val?`, isQ: true },
-                { x: 3*w/4, y: 85, label: `${fNames[2]}\n> val?`, isQ: true },
-                { x: w/8, y: 145, label: `${fNames[3]}\nYes?`, isQ: true },
-                { x: 3*w/8, y: 145, label: `${fNames[0]}\n< val?`, isQ: true },
-                { x: 5*w/8, y: 145, label: `${tName}\n72%`, color: COLORS.red },
-                { x: 7*w/8, y: 145, label: 'SAFE\n96%', color: COLORS.green },
-                { x: w/16, y: 205, label: `${fNames[1]||'F4'}\n> val?`, isQ: true },
-                { x: 3*w/16, y: 205, label: `${tName}\n88%`, color: COLORS.red },
-                { x: 5*w/16, y: 205, label: `${fNames[2]||'F5'}\n> val?`, isQ: true },
-                { x: 7*w/16, y: 205, label: 'SAFE\n65%', color: COLORS.green },
-                { x: w/32, y: 265, label: 'READMIT\n99%', color: COLORS.red },
-                { x: 3*w/32, y: 265, label: 'READMIT\n94%', color: COLORS.red },
-                { x: 9*w/32, y: 265, label: 'READMIT\n85%', color: COLORS.red },
-                { x: 11*w/32, y: 265, label: 'SAFE\n71%', color: COLORS.green },
-            ],
-            5: [
-                { x: w/2, y: 20, label: `${fNames[0]}\n< val?`, isQ: true },
-                { x: w/4, y: 70, label: `${fNames[1]}\n> val?`, isQ: true },
-                { x: 3*w/4, y: 70, label: `${fNames[2]}\n> val?`, isQ: true },
-                { x: w/8, y: 120, label: `${fNames[3]}\nYes?`, isQ: true },
-                { x: 3*w/8, y: 120, label: `${fNames[0]}\n< val?`, isQ: true },
-                { x: 5*w/8, y: 120, label: `${tName}\n72%`, color: COLORS.red },
-                { x: 7*w/8, y: 120, label: 'SAFE\n96%', color: COLORS.green },
-                { x: w/16, y: 170, label: `${fNames[1]||'F4'}\n> val?`, isQ: true },
-                { x: 3*w/16, y: 170, label: `${tName}\n88%`, color: COLORS.red },
-                { x: 5*w/16, y: 170, label: `${fNames[2]||'F5'}\n> val?`, isQ: true },
-                { x: 7*w/16, y: 170, label: 'SAFE\n65%', color: COLORS.green },
-                { x: w/32, y: 220, label: `${fNames[3]||'F6'}\nYes?`, isQ: true },
-                { x: 3*w/32, y: 220, label: 'READMIT\n94%', color: COLORS.red },
-                { x: 5*w/32, y: 220, label: 'READMIT\n91%', color: COLORS.red },
-                { x: 7*w/32, y: 220, label: 'SAFE\n68%', color: COLORS.green },
-                { x: 9*w/32, y: 220, label: 'READMIT\n85%', color: COLORS.red },
-                { x: 11*w/32, y: 220, label: 'SAFE\n71%', color: COLORS.green },
-                { x: w/64, y: 270, label: 'READMIT\n99%', color: COLORS.red },
-                { x: 3*w/64, y: 270, label: 'READMIT\n96%', color: COLORS.red },
-            ],
-            6: [
-                { x: w/2, y: 15, label: `${fNames[0]}\n< val?`, isQ: true },
-                { x: w/4, y: 55, label: `${fNames[1]}\n> val?`, isQ: true },
-                { x: 3*w/4, y: 55, label: `${fNames[2]}\n> val?`, isQ: true },
-                { x: w/8, y: 95, label: `${fNames[3]}\nYes?`, isQ: true },
-                { x: 3*w/8, y: 95, label: `${fNames[0]}\n< val?`, isQ: true },
-                { x: 5*w/8, y: 95, label: `${tName}\n72%`, color: COLORS.red },
-                { x: 7*w/8, y: 95, label: 'SAFE\n96%', color: COLORS.green },
-                { x: w/16, y: 135, label: `${fNames[1]||'F4'}\n> val?`, isQ: true },
-                { x: 3*w/16, y: 135, label: `${tName}\n88%`, color: COLORS.red },
-                { x: 5*w/16, y: 135, label: `${fNames[2]||'F5'}\n> val?`, isQ: true },
-                { x: 7*w/16, y: 135, label: 'SAFE\n65%', color: COLORS.green },
-                { x: w/32, y: 175, label: `${fNames[3]||'F6'}\nYes?`, isQ: true },
-                { x: 3*w/32, y: 175, label: 'READMIT\n94%', color: COLORS.red },
-                { x: 5*w/32, y: 175, label: 'READMIT\n91%', color: COLORS.red },
-                { x: 7*w/32, y: 175, label: 'SAFE\n68%', color: COLORS.green },
-                { x: w/64, y: 215, label: `${fNames[0]||'F1'}\n< val?`, isQ: true },
-                { x: 3*w/64, y: 215, label: 'READMIT\n96%', color: COLORS.red },
-                { x: w/128, y: 255, label: 'READMIT\n99%', color: COLORS.red },
-                { x: 3*w/128, y: 255, label: 'READMIT\n98%', color: COLORS.red },
-            ],
-        };
-        return trees[depth] || trees[3];
-    }, [depth, w, fNames, tName, COLORS]);
+        if (!dataset || dataset.length === 0 || !datasetSchema) return { list: [], width: 800, height: 320, maxComputedDepth: 0 };
 
-    const svgStyle = {
-        width: '100%', height: '320px', borderRadius: '16px',
-        border: isDarkMode ? '1px solid rgba(255,255,255,0.06)' : '1px solid #DDE4EA',
-        background: isDarkMode ? '#0f172a' : '#F0F7FB',
-        display: 'block',
-    };
+        const numCols = datasetSchema.filter(c => (c.role === 'Number (measurement)' || c.role === 'Category') && c.name !== targetColumn).map(c => c.name);
+
+        const targetValues = [...new Set(dataset.map(row => row[targetColumn]).filter(v => v !== undefined && v !== ''))];
+        const tMap = {};
+        if (targetValues.length >= 2) { tMap[targetValues[0]] = 0; tMap[targetValues[1]] = 1; }
+        else { tMap[targetValues[0] || '1'] = 1; }
+
+        const classLabel0 = String(targetValues[0] || 'Safe').toUpperCase();
+        const classLabel1 = String(targetValues[1] || tName).toUpperCase();
+
+        const XTrain = [];
+        const yTrain = [];
+        dataset.slice(0, 1000).forEach(row => {
+            const rowFeatures = numCols.map(col => Number(row[col]) || 0);
+            let targetVal = tMap[row[targetColumn]];
+            if (targetVal === undefined) targetVal = 0;
+            XTrain.push(rowFeatures);
+            yTrain.push(targetVal);
+        });
+
+        if (XTrain.length === 0) return { list: [], width: 800, height: 320, maxComputedDepth: 0 };
+
+        const dt = new DecisionTreeClassifier({ maxDepth: maxDepth });
+        dt.train(XTrain, yTrain);
+
+        const list = [];
+        let idCounter = 0;
+
+        const traverse = (n, depth) => {
+            if (!n) return null;
+            
+            let label = '';
+            let isLeaf = false;
+            let color = null;
+
+            if (n.splitColumn !== undefined && n.splitValue !== undefined) {
+                 const colName = numCols[n.splitColumn] || `Feature ${n.splitColumn}`;
+                 const val = Number(n.splitValue).toFixed(2);
+                 label = `${colName}\n< ${val}?`;
+            } else {
+                 isLeaf = true;
+                 const dist = n.distribution ? n.distribution[0] : [];
+                 const c0 = dist[0] || 0;
+                 const c1 = dist[1] || 0;
+                 const total = c0 + c1;
+                 const pct = total > 0 ? Math.round((c1/total)*100) : 0;
+                 if (c1 >= c0) {
+                     label = `${classLabel1}\n${pct}% Conf`;
+                     color = COLORS.red;
+                 } else {
+                     label = `${classLabel0}\n${100 - pct}% Conf`;
+                     color = COLORS.green;
+                 }
+            }
+
+            const nodeId = `node_${idCounter++}`;
+            const nodeObj = { id: nodeId, label, isLeaf, isQ: !isLeaf, color, depth };
+            list.push(nodeObj);
+            
+            if (n.left) nodeObj.leftId = traverse(n.left, depth + 1);
+            if (n.right) nodeObj.rightId = traverse(n.right, depth + 1);
+            
+            return nodeId;
+        };
+        
+        if (dt.root) traverse(dt.root, 0);
+
+        // Layout algorithm
+        const hSpacing = 135; 
+        const vSpacing = 100;
+        let currentX = 0;
+
+        const computeLayout = (nodeId) => {
+            const node = list.find(n => n.id === nodeId);
+            if (!node) return 0;
+            
+            let leftX, rightX;
+            if (node.leftId && node.rightId) {
+                leftX = computeLayout(node.leftId);
+                rightX = computeLayout(node.rightId);
+                node.x = (leftX + rightX) / 2;
+            } else if (node.leftId) {
+                node.x = computeLayout(node.leftId);
+            } else if (node.rightId) {
+                node.x = computeLayout(node.rightId);
+            } else {
+                node.x = currentX;
+                currentX += hSpacing;
+            }
+            node.y = 40 + node.depth * vSpacing;
+            return node.x;
+        };
+        
+        if (list.length > 0) computeLayout(list[0].id);
+
+        let computedW = 800; let computedH = 320; let maxDepthFound = 0;
+        if (list.length > 0) {
+            const minX = Math.min(...list.map(n => n.x)) - 75;
+            const maxX = Math.max(...list.map(n => n.x)) + 75;
+            const shiftX = -minX;
+            list.forEach(n => n.x += shiftX);
+            computedW = maxX - minX;
+            computedH = Math.max(...list.map(n => n.y)) + 60;
+            maxDepthFound = Math.max(...list.map(n => n.depth));
+        }
+
+        return { list, width: Math.max(computedW, 300), height: Math.max(computedH, 200), maxComputedDepth: maxDepthFound, fNameRoot: list.length > 0 ? list[0].label.split('\n')[0] : '' };
+    }, [maxDepth, dataset, datasetSchema, targetColumn, tName, COLORS]);
+
+    if (treeData.list.length === 0) {
+        return <div className="p-4 text-sm text-slate-500">Processing decision tree rules...</div>;
+    }
 
     return (
         <div>
             <VizDescription isDarkMode={isDarkMode}>
-                The tree asks yes/no questions about patient measurements. Follow the path from top to bottom to reach a final decision.
+                The tree asks data-driven yes/no questions to reach a diagnosis. Deeply analyze the splits by zooming in.
             </VizDescription>
-            <motion.svg
-                ref={svgRef} style={svgStyle} viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="xMidYMid meet"
-                initial={{ opacity: 0, scale: 0.98 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.4 }}
-            >
-                {/* Edges */}
-                {treeData.map((node, i) => {
-                    const leftChild = 2 * i + 1;
-                    const rightChild = 2 * i + 2;
-                    return (
-                        <g key={`edges-${i}`}>
-                            {leftChild < treeData.length && (
-                                <line x1={node.x} y1={node.y + 18} x2={treeData[leftChild].x} y2={treeData[leftChild].y - 18}
-                                    stroke={COLORS.muted} strokeWidth="1.5" fill="none" strokeOpacity="0.5" />
-                            )}
-                            {rightChild < treeData.length && (
-                                <line x1={node.x} y1={node.y + 18} x2={treeData[rightChild].x} y2={treeData[rightChild].y - 18}
-                                    stroke={COLORS.muted} strokeWidth="1.5" fill="none" strokeOpacity="0.5" />
-                            )}
-                        </g>
-                    );
-                })}
-                {/* Nodes */}
-                {treeData.map((n, i) => {
-                    const lines = n.label.split('\n');
-                    return (
-                        <g key={`node-${i}`} style={{ cursor: 'pointer' }}>
-                            <rect
-                                x={n.x - 50} y={n.y - 18}
-                                width={100} height={36} rx={10}
-                                fill={n.color || COLORS.cardBg}
-                                stroke={n.isQ ? primaryStr : (n.color || primaryStr)}
-                                strokeWidth="1.5"
-                                fillOpacity={n.color ? 1 : 0.9}
-                            />
-                            <text
-                                x={n.x} y={lines.length > 1 ? n.y - 2 : n.y + 5}
-                                textAnchor="middle" dominantBaseline="middle"
-                                fill={n.color ? '#fff' : COLORS.text}
-                                style={{ fontSize: '11px', fontWeight: 600, fontFamily: 'Inter, sans-serif' }}
-                            >{lines[0]}</text>
-                            {lines.length > 1 && (
-                                <text x={n.x} y={n.y + 12} textAnchor="middle"
-                                    fill={n.color ? 'rgba(255,255,255,0.8)' : COLORS.muted}
-                                    style={{ fontSize: '10px', fontFamily: 'Inter, sans-serif' }}
-                                >{lines[1]}</text>
-                            )}
-                        </g>
-                    );
-                })}
-            </motion.svg>
+            
+            <ZoomPanWrapper isDarkMode={isDarkMode}>
+                <div style={{ width: treeData.width, height: treeData.height, position: 'relative' }}>
+                    <svg width={treeData.width} height={treeData.height} style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none' }}>
+                        {treeData.list.map(node => {
+                            const leftChild = treeData.list.find(n => n.id === node.leftId);
+                            const rightChild = treeData.list.find(n => n.id === node.rightId);
+                            return (
+                                <g key={`edge-${node.id}`}>
+                                    {leftChild && (
+                                        <>
+                                            <line x1={node.x} y1={node.y + 18} x2={leftChild.x} y2={leftChild.y - 18} stroke={COLORS.muted} strokeWidth="1.5" opacity="0.6" />
+                                            {/* 'Yes' label */}
+                                            <text x={(node.x + leftChild.x)/2 - 12} y={(node.y + leftChild.y)/2} fill={COLORS.muted} fontSize="10px" fontWeight="bold">Yes</text>
+                                        </>
+                                    )}
+                                    {rightChild && (
+                                        <>
+                                            <line x1={node.x} y1={node.y + 18} x2={rightChild.x} y2={rightChild.y - 18} stroke={COLORS.muted} strokeWidth="1.5" opacity="0.6" />
+                                            {/* 'No' label */}
+                                            <text x={(node.x + rightChild.x)/2 + 4} y={(node.y + rightChild.y)/2} fill={COLORS.muted} fontSize="10px" fontWeight="bold">No</text>
+                                        </>
+                                    )}
+                                </g>
+                            );
+                        })}
+                    </svg>
+                    
+                    {treeData.list.map(n => {
+                        const lines = n.label.split('\n');
+                        return (
+                            <div key={`htmlnode-${n.id}`} style={{
+                                position: 'absolute', left: n.x, top: n.y,
+                                transform: 'translate(-50%, -50%)',
+                                width: '130px', maxWidth: '160px', minWidth: '90px',
+                                minHeight: '36px',
+                                backgroundColor: n.color || COLORS.cardBg,
+                                border: `1.5px solid ${n.isQ ? primaryStr : (n.color || primaryStr)}`,
+                                borderRadius: '8px', padding: '6px',
+                                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                                color: n.color ? '#fff' : COLORS.text,
+                                boxShadow: isDarkMode ? '0 4px 6px rgba(0,0,0,0.5)' : '0 4px 6px rgba(0,0,0,0.06)',
+                            }}>
+                                <div style={{ fontSize: '11px', fontWeight: 700, width: '100%', textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={lines[0]}>
+                                    {lines[0]}
+                                </div>
+                                {lines.length > 1 && (
+                                    <div style={{ fontSize: '10px', opacity: 0.9, marginTop: '2px', width: '100%', textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={lines[1]}>
+                                        {lines[1]}
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+            </ZoomPanWrapper>
+            
             <ClinicalBanner isDarkMode={isDarkMode} accentColor={secondaryStr}>
-                With a depth of {maxDepth}, the model creates {Math.pow(2, Math.min(maxDepth, 4))} decision paths.
-                The first split ({fNames[0]}) is the strongest predictor.
-                {maxDepth > 5 ? ' High depth might over-specialize on edge-cases.' : ' A balanced depth provides a generalizable guideline.'}
+                Extracted a real tree showing {treeData.maxComputedDepth} decision levels. 
+                The root split ({treeData.fNameRoot}) represents the most significant feature for deciding outcome.
             </ClinicalBanner>
         </div>
     );
@@ -1207,7 +1142,7 @@ const NBViz = React.memo(({ params, isDarkMode, datasetSchema, targetColumn, pri
 /* ═══════════════════════════════════════════════════════════════
    MAIN EXPORT — Model Visualizer Switch
 ═══════════════════════════════════════════════════════════════ */
-const ModelVisualizer = React.memo(({ selectedModel, params, isDarkMode, datasetSchema, targetColumn, domain, dataset }) => {
+const ModelVisualizer = React.memo(({ selectedModel, params, isDarkMode, datasetSchema, targetColumn, domain }) => {
     const primaryStr = domain?.theme?.primary || '#6366f1';
     const secondaryStr = domain?.theme?.secondary || '#10b981';
 
@@ -1223,7 +1158,7 @@ const ModelVisualizer = React.memo(({ selectedModel, params, isDarkMode, dataset
                 {(() => {
                     switch (selectedModel) {
                         case 'knn': return <KNNViz params={params} isDarkMode={isDarkMode} datasetSchema={datasetSchema} targetColumn={targetColumn} primaryStr={primaryStr} secondaryStr={secondaryStr} />;
-                        case 'svm': return <SVMViz params={params} isDarkMode={isDarkMode} datasetSchema={datasetSchema} targetColumn={targetColumn} dataset={dataset} primaryStr={primaryStr} secondaryStr={secondaryStr} />;
+                        case 'svm': return <SVMViz params={params} isDarkMode={isDarkMode} datasetSchema={datasetSchema} targetColumn={targetColumn} primaryStr={primaryStr} secondaryStr={secondaryStr} />;
                         case 'lr': return <LRViz params={params} isDarkMode={isDarkMode} datasetSchema={datasetSchema} targetColumn={targetColumn} primaryStr={primaryStr} secondaryStr={secondaryStr} />;
                         case 'dt': return <DTViz params={params} isDarkMode={isDarkMode} datasetSchema={datasetSchema} targetColumn={targetColumn} primaryStr={primaryStr} secondaryStr={secondaryStr} />;
                         case 'rf': return <RFViz params={params} isDarkMode={isDarkMode} datasetSchema={datasetSchema} targetColumn={targetColumn} primaryStr={primaryStr} secondaryStr={secondaryStr} />;

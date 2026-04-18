@@ -4,6 +4,7 @@ import { RandomForestClassifier } from 'ml-random-forest';
 import { GaussianNB } from 'ml-naivebayes';
 import LogisticRegression from 'ml-logistic-regression';
 import { Matrix } from 'ml-matrix';
+import SVM from 'ml-svm';
 
 // ─── Stratified Sampling ─────────────────────────────────────────────────────
 // Maintains class distribution proportions when sampling large datasets
@@ -172,111 +173,6 @@ export function calculateMetrics(yTrue, yPred) {
     };
 }
 
-// ─── SVM Implementation (Pegasos SGD + Random Fourier Features) ─────────────
-
-// Seeded normal random via Box-Muller transform
-function _svmNormalRandom(seed) {
-    const sr = (s) => { const x = Math.sin(s) * 10000; return x - Math.floor(x); };
-    const u1 = Math.max(1e-10, sr(seed));
-    const u2 = sr(seed + 7919);
-    return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
-}
-
-/**
- * Pegasos SGD for linear SVM.
- * Labels must be -1/+1.
- * Returns { w, bias, type: 'linear' }
- */
-export function trainLinearSVM(X, y, C, maxIter, seed = 42) {
-    const n = X.length;
-    const d = X[0].length;
-    const w = new Float64Array(d);
-    let bias = 0;
-    const lambda = 1 / (C * n + 1e-8);
-    const sr = (s) => { const x = Math.sin(s) * 10000; return x - Math.floor(x); };
-    const T = maxIter || Math.min(3000, Math.max(500, 20 * n));
-
-    for (let t = 1; t <= T; t++) {
-        const idx = Math.floor(sr(seed + t) * n) % n;
-        const xi = X[idx];
-        const yi = y[idx];
-        const eta = 1 / (lambda * t);
-
-        let score = bias;
-        for (let j = 0; j < d; j++) score += w[j] * xi[j];
-
-        if (yi * score < 1) {
-            for (let j = 0; j < d; j++) w[j] = (1 - eta * lambda) * w[j] + eta * yi * xi[j];
-            bias += eta * yi * 0.01;
-        } else {
-            for (let j = 0; j < d; j++) w[j] *= (1 - eta * lambda);
-        }
-    }
-
-    return { w: Array.from(w), bias, type: 'linear' };
-}
-
-/**
- * Generate Random Fourier Features basis for RBF kernel approximation.
- * K(x,y) ≈ z(x)·z(y)  where z(x) = sqrt(2/D) * cos(Wx + b)
- */
-export function generateRFF(inputDim, D, gamma, seed = 42) {
-    const W = [];
-    const b = [];
-    const scale = Math.sqrt(2 * gamma);
-    const sr = (s) => { const x = Math.sin(s) * 10000; return x - Math.floor(x); };
-
-    for (let i = 0; i < D; i++) {
-        const row = [];
-        for (let j = 0; j < inputDim; j++) {
-            row.push(_svmNormalRandom(seed + i * inputDim + j) * scale);
-        }
-        W.push(row);
-        b.push(sr(seed + D * inputDim + i) * 2 * Math.PI);
-    }
-    return { W, b, D };
-}
-
-/** Transform data X through Random Fourier Features basis */
-export function transformRFF(X, rff) {
-    const { W, b, D } = rff;
-    const coeff = Math.sqrt(2 / D);
-    return X.map(x => W.map((w, i) => {
-        let dot = 0;
-        for (let j = 0; j < x.length; j++) dot += w[j] * x[j];
-        return coeff * Math.cos(dot + b[i]);
-    }));
-}
-
-/** Train RBF SVM: RFF transform + Pegasos linear */
-export function trainRBFSVM(X, y, C, gamma, seed = 42) {
-    const D = Math.min(200, Math.max(50, X[0].length * 10));
-    const rff = generateRFF(X[0].length, D, gamma, seed);
-    const Zt = transformRFF(X, rff);
-    const model = trainLinearSVM(Zt, y, C, null, seed);
-    return { ...model, rff, type: 'rbf' };
-}
-
-/** Raw decision function values (positive = class +1) */
-export function svmDecisionValues(X, model) {
-    let features = X;
-    if (model.type === 'rbf' && model.rff) {
-        features = transformRFF(X, model.rff);
-    }
-    return features.map(xi => {
-        let score = model.bias;
-        for (let j = 0; j < Math.min(xi.length, model.w.length); j++) {
-            score += model.w[j] * xi[j];
-        }
-        return score;
-    });
-}
-
-/** Predict 0/1 from decision values */
-export function svmPredict(X, model) {
-    return svmDecisionValues(X, model).map(s => s > 0 ? 1 : 0);
-}
-
 // ─── Training with timeout protection ────────────────────────────────────────
 function withTimeout(promise, ms) {
     return Promise.race([
@@ -391,26 +287,42 @@ export async function runMLTraining(modelId, params, dataset, datasetSchema, tar
                 const preds = lr.predict(new Matrix(XTest));
                 return Array.from(preds);
             } else if (modelId === 'svm') {
-                // Real SVM: Pegasos (linear) or RFF+Pegasos (RBF)
-                const isRBF = (params.kernel || 'RBF') === 'RBF';
-                const cVal = Math.max(0.01, params.c || 1);
-                const yTrainSVM = yTrain.map(v => v === 1 ? 1 : -1);
-
-                let svmModel;
-                if (isRBF) {
-                    // gamma = 1/(n_features * mean_variance) — "scale" heuristic
-                    const nf = XTrain[0].length;
-                    let totalVar = 0;
-                    for (let j = 0; j < nf; j++) {
-                        const mean = XTrain.reduce((s, x) => s + x[j], 0) / XTrain.length;
-                        totalVar += XTrain.reduce((s, x) => s + (x[j] - mean) ** 2, 0) / XTrain.length;
-                    }
-                    const gamma = 1 / (nf * (totalVar / nf + 1e-8));
-                    svmModel = trainRBFSVM(XTrain, yTrainSVM, cVal, gamma, 42);
-                } else {
-                    svmModel = trainLinearSVM(XTrain, yTrainSVM, cVal, null, 42);
+                // Determine kernel string required by ml-svm
+                const isLinear = params.kernel === 'Linear';
+                const kernelStr = isLinear ? 'linear' : 'rbf';
+                
+                // ml-svm expects target classes as 1 and -1.
+                // Our prepareData outputs 1 and 0. Convert 0 to -1.
+                const svmYTrain = yTrain.map(val => val === 1 ? 1 : -1);
+                
+                // Use a smaller dataset for SVM to prevent UI freezing (SVM is O(N^2) or O(N^3) typically)
+                const MAX_SVM_TRAIN = 400;
+                let finalXTrain = XTrain;
+                let finalYTrain = svmYTrain;
+                
+                if (XTrain.length > MAX_SVM_TRAIN) {
+                    finalXTrain = XTrain.slice(0, MAX_SVM_TRAIN);
+                    finalYTrain = svmYTrain.slice(0, MAX_SVM_TRAIN);
                 }
-                return svmPredict(XTest, svmModel);
+
+                const svmOpts = {
+                    C: params.c || 1,
+                    kernel: kernelStr,
+                    tol: 1e-4,
+                    maxPasses: 10,
+                    maxIterations: 10000
+                };
+                
+                if (!isLinear) {
+                    svmOpts.kernelOptions = { sigma: 0.1 };
+                }
+
+                const svm = new SVM(svmOpts);
+                svm.train(finalXTrain, finalYTrain);
+                
+                const rawPreds = svm.predict(XTest);
+                // Map the -1/1 predictions back to 0/1 to match standard metric calculator
+                return Array.from(rawPreds).map(val => val === 1 ? 1 : 0);
             } else {
                 return XTest.map(() => 0); 
             }
