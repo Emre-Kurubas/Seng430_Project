@@ -277,10 +277,9 @@ export async function runMLTraining(modelId, params, dataset, datasetSchema, tar
                 nb.train(XTrain, yTrain);
                 return nb.predict(XTest);
             } else if (modelId === 'lr') {
-                // Map C to numSteps to show impact of 'effort' on the gradient
-                const numSteps = Math.min(1000, Math.max(50, Math.round(100 * (params.c || 1))));
+                // Background automatic iterations since we removed it from UI to simplify for doctors
                 const lr = new LogisticRegression({ 
-                    numSteps: numSteps, 
+                    numSteps: 1000, 
                     learningRate: 0.05 
                 });
                 lr.train(new Matrix(XTrain), Matrix.columnVector(yTrain));

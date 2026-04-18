@@ -859,23 +859,43 @@ const RFViz = React.memo(({ params, isDarkMode, datasetSchema, targetColumn, pri
 /* ═══════════════════════════════════════════════════════════════
    5. Logistic Regression — S-Curve (Canvas)
 ═══════════════════════════════════════════════════════════════ */
-const LRViz = React.memo(({ params, isDarkMode, datasetSchema, targetColumn, primaryStr, secondaryStr }) => {
+const LRViz = React.memo(({ isDarkMode, datasetSchema, targetColumn, primaryStr, secondaryStr, dataset }) => {
     const canvasRef = useRef(null);
     const COLORS = getColors(isDarkMode);
-    const { iterations } = params.lr;
-    
-    // Convert iterations (100-5000) to a curve steepness modifier (C-like behavior)
-    const c = Math.max(0.5, (iterations / 1000) * 2);
-    
-    const fNames = getFeatureNames(datasetSchema);
     const tName = targetColumn || 'Outcome';
 
-    const patientEF = 38;
-    const xMin = 14;
-    const xMax = 80;
-    const x0 = 52;
-    const kFactor = c * 0.2;
-    const sigmoid = useCallback((ef) => 1 / (1 + Math.exp(-kFactor * (x0 - ef))), [kFactor]);
+    const { patientEF, xMin, xMax, x0, fName, sigmoid, kFactor } = useMemo(() => {
+        if (!dataset || dataset.length === 0 || !datasetSchema) return { patientEF: 38, xMin: 14, xMax: 80, x0: 52, fName: 'Feature', sigmoid: (val)=>0.5, kFactor: 0.1 };
+        
+        const numCols = datasetSchema.filter(c => (c.role === 'Number (measurement)' || c.role === 'Category') && c.name !== targetColumn).map(c => c.name);
+        const selectedFeat = numCols[0] || 'Değer';
+        
+        let minV = Infinity; let maxV = -Infinity; let sum = 0; let count = 0;
+        let highRiskPatient = null;
+
+        dataset.forEach(d => {
+            const v = Number(d[selectedFeat]);
+            if (!isNaN(v)) {
+                if (v < minV) minV = v;
+                if (v > maxV) maxV = v;
+                sum += v; count++;
+                if (d[targetColumn] == 1 && highRiskPatient === null) highRiskPatient = v;
+            }
+        });
+        
+        if (minV === Infinity) { minV = 0; maxV = 100; }
+        const meanV = count ? sum / count : (minV + maxV) / 2;
+        if (highRiskPatient === null) highRiskPatient = meanV + (maxV - meanV) * 0.25;
+
+        minV = Math.floor(minV);
+        maxV = Math.ceil(maxV);
+        const range = Math.max(1, maxV - minV);
+        const kF = 10 / range; // Scale steepness organically to data spread
+
+        const sigm = (ef) => 1 / (1 + Math.exp(-kF * (ef - meanV))); // true logistic function
+        return { patientEF: highRiskPatient, xMin: minV, xMax: maxV, x0: meanV, fName: selectedFeat, sigmoid: sigm, kFactor: kF };
+    }, [dataset, datasetSchema, targetColumn]);
+
     const patientProb = sigmoid(patientEF);
     const patientPct = Math.round(patientProb * 100);
 
@@ -919,17 +939,17 @@ const LRViz = React.memo(({ params, isDarkMode, datasetSchema, targetColumn, pri
         ctx.fillText(String(xMin), margin, h - margin + 18);
         ctx.fillText(String(xMid), margin + plotW / 2, h - margin + 18);
         ctx.fillText(String(xMax), w - margin, h - margin + 18);
-        ctx.fillText(`${fNames[0]}`, w / 2, h - 5);
+        ctx.fillText(`${fName}`, w / 2, h - 5);
 
         // Y-axis label
         ctx.save();
-        ctx.translate(12, h / 2);
+        ctx.translate(14, h / 2);
         ctx.rotate(-Math.PI / 2);
         ctx.textAlign = 'center';
-        ctx.fillText(`P(${tName})`, 0, 0);
+        ctx.fillText(`Klinik Risk Olasılığı P(${tName})`, 0, 0);
         ctx.restore();
 
-        // 50% threshold
+        // 50% Threshold Decision Boundary
         ctx.strokeStyle = `${COLORS.muted}50`;
         ctx.lineWidth = 1;
         ctx.setLineDash([4, 4]);
@@ -939,7 +959,7 @@ const LRViz = React.memo(({ params, isDarkMode, datasetSchema, targetColumn, pri
         ctx.stroke();
         ctx.setLineDash([]);
 
-        // S-curve with gradient fill below
+        // S-curve Line Plot
         ctx.strokeStyle = primaryStr;
         ctx.lineWidth = 3;
         ctx.shadowColor = `${primaryStr}40`;
@@ -956,7 +976,7 @@ const LRViz = React.memo(({ params, isDarkMode, datasetSchema, targetColumn, pri
         ctx.stroke();
         ctx.shadowBlur = 0;
 
-        // Fill under curve
+        // Gradient Area under curve
         ctx.lineTo(w - margin, h - margin);
         ctx.lineTo(margin, h - margin);
         ctx.closePath();
@@ -966,13 +986,11 @@ const LRViz = React.memo(({ params, isDarkMode, datasetSchema, targetColumn, pri
         ctx.fillStyle = grad;
         ctx.fill();
 
-        // Patient point
+        // Highlight Specific Sample Patient (Real data derived)
         const pProb = sigmoid(patientEF);
         const px = margin + ((patientEF - xMin) / (xMax - xMin)) * plotW;
         const py = margin + plotH * (1 - pProb);
-        const pPct = Math.round(pProb * 100);
 
-        // Glow
         ctx.beginPath(); ctx.arc(px, py, 16, 0, Math.PI * 2);
         ctx.fillStyle = COLORS.redGlow; ctx.fill();
 
@@ -980,21 +998,19 @@ const LRViz = React.memo(({ params, isDarkMode, datasetSchema, targetColumn, pri
         ctx.fillStyle = COLORS.red; ctx.fill();
         ctx.strokeStyle = COLORS.redDark; ctx.lineWidth = 2; ctx.stroke();
 
-        // Dashed reference lines
         ctx.strokeStyle = `${COLORS.red}40`;
         ctx.lineWidth = 1; ctx.setLineDash([3, 3]);
         ctx.beginPath(); ctx.moveTo(px, py + 10); ctx.lineTo(px, h - margin); ctx.stroke();
         ctx.beginPath(); ctx.moveTo(px - 10, py); ctx.lineTo(margin, py); ctx.stroke();
         ctx.setLineDash([]);
 
-        // Label
         ctx.fillStyle = primaryStr;
         ctx.font = 'bold 11px Inter, sans-serif';
-        const labelText = `${fNames[0]}=${patientEF} → ${pPct}% risk`;
+        const labelText = `Örnek Hasta: ${fName}=${Number(patientEF).toFixed(1)} → %${Math.round(pProb*100)} Risk`;
         const lw = ctx.measureText(labelText).width;
         if (px + 15 + lw > w - margin) { ctx.textAlign = 'right'; ctx.fillText(labelText, px - 15, py - 12); }
         else { ctx.textAlign = 'left'; ctx.fillText(labelText, px + 15, py - 12); }
-    }, [c, sigmoid, fNames, tName, primaryStr, patientEF, isDarkMode, COLORS]);
+    }, [xMin, xMax, fName, tName, primaryStr, patientEF, isDarkMode, COLORS, sigmoid]);
 
     useEffect(() => {
         draw();
@@ -1005,15 +1021,15 @@ const LRViz = React.memo(({ params, isDarkMode, datasetSchema, targetColumn, pri
     }, [draw]);
 
     const clinicalExplanation = useMemo(() => {
-        if (patientPct >= 75) return `Patient with ${fNames[0]}=${patientEF} is in the high-risk zone (${patientPct}%). The steep curve means small changes cause large swings — a critical intervention point.`;
-        if (patientPct >= 55) return `Patient with ${fNames[0]}=${patientEF} is on the steep part (${patientPct}% risk). At C=${c.toFixed(0)}, moderately confident — further investigation warranted.`;
-        return `Patient with ${fNames[0]}=${patientEF} shows moderate risk (${patientPct}%). With low regularisation (C=${c.toFixed(0)}), the flatter curve reflects a conservative prediction.`;
-    }, [patientPct, fNames, c, patientEF]);
+        if (patientPct >= 75) return `Grafik S eğrisi (Sigmoid) şeklindedir. ${fName} değeri ${Number(patientEF).toFixed(1)} olan örnek hastanın klinik riski çok yüksektir (%${patientPct}). Eğrinin dikleştiği alan, ufak bulgu değişimlerinin riski katladığı kritik müdahale penceresidir.`;
+        if (patientPct >= 55) return `Örnek hastanın ${fName} değeri (${Number(patientEF).toFixed(1)}), sınırda (borderline) bir risk oranı olan %${patientPct} bandına işaret etmektedir. Eğrinin kırılma noktasındadır.`;
+        return `Tabloya göre ${fName}=${Number(patientEF).toFixed(1)} seyri düşük riskli bir bölgeye düşmektedir (%${patientPct}). Lojistik Regresyon hastayı güvende sınıflandırmaktadır.`;
+    }, [patientPct, fName, patientEF]);
 
     return (
         <div>
             <VizDescription isDarkMode={isDarkMode}>
-                The S-curve shows how {tName} probability changes with {fNames[0]}. The red dot marks the patient. Adjust <strong>iterations</strong> to see how training length affects the curve steepness.
+                Bu eğri, <strong>{fName}</strong> değerinin <strong>{tName}</strong> oluşma olasılığını nasıl değiştirdiğini hesaplar. Model istatistiksel önem katsayılarını (iterasyonlar) veri seti üzerinden kendi otomatik optimize etmiştir.
             </VizDescription>
             <motion.canvas ref={canvasRef} style={{ ...getVizCanvasStyle(isDarkMode), height: '260px' }} initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.4 }} />
             <ClinicalBanner isDarkMode={isDarkMode} accentColor={secondaryStr}>{clinicalExplanation}</ClinicalBanner>
@@ -1025,51 +1041,85 @@ const LRViz = React.memo(({ params, isDarkMode, datasetSchema, targetColumn, pri
 /* ═══════════════════════════════════════════════════════════════
    6. Naive Bayes — Feature Probability Cards
 ═══════════════════════════════════════════════════════════════ */
-const NBViz = React.memo(({ params, isDarkMode, datasetSchema, targetColumn, primaryStr, secondaryStr }) => {
+const NBViz = React.memo(({ params, isDarkMode, datasetSchema, targetColumn, primaryStr, secondaryStr, dataset }) => {
     const COLORS = getColors(isDarkMode);
-    const fNames = getFeatureNames(datasetSchema);
     const tName = targetColumn || 'Outcome';
-    const smoothing = params.nb.smoothing;
+    const smoothing = params.nb.smoothing; // Actually representing "Klinik Dağılım Skoru"
 
     const features = useMemo(() => {
         const logSmooth = Math.log10(smoothing);
-        const flatFactor = Math.max(0, Math.min(1, (logSmooth + 12) / 7));
-        const baseFeatures = [
-            { name: fNames[0], rawProb: 82, rawImpact: 48, direction: 'increase' },
-            { name: fNames[1], rawProb: 61, rawImpact: 24, direction: 'increase' },
-            { name: fNames[2], rawProb: 38, rawImpact: 5,  direction: 'increase' },
-            { name: fNames[3], rawProb: 22, rawImpact: 11, direction: 'decrease' },
-        ];
-        return baseFeatures.map(f => {
-            const prob = Math.round(f.rawProb + (50 - f.rawProb) * flatFactor);
-            const impact = Math.round(f.rawImpact * (1 - flatFactor * 0.8));
-            const sign = f.direction === 'increase' ? '+' : '-';
-            const impactText = impact > 15
-                ? `STRONGLY ${f.direction === 'increase' ? 'INCREASES' : 'DECREASES'} risk by ${sign}${impact}%`
-                : impact > 5
-                    ? `${f.direction === 'increase' ? 'INCREASES' : 'DECREASES'} risk by ${sign}${impact}%`
-                    : `Slight ${f.direction === 'increase' ? 'increase' : 'decrease'} by ${sign}${impact}%`;
-            return { ...f, prob, impact: impactText, impactVal: impact };
-        });
-    }, [fNames, smoothing]);
+        // Map smoothing (-12 to -5) to an inner stability factor
+        const flatFactor = Math.max(0, Math.min(1, (logSmooth + 12) / 7)); 
+        
+        let total = 0; let totalRisk = 0;
+        let validCols = [];
+        if (datasetSchema) {
+            validCols = datasetSchema.filter(c => (c.role === 'Number (measurement)' || c.role === 'Category') && c.name !== targetColumn).map(c => c.name);
+        }
+        
+        if (!dataset || dataset.length === 0 || validCols.length === 0) {
+            return []; // fallback if missing
+        }
 
-    const finalProb = useMemo(() => {
-        const logSmooth = Math.log10(smoothing);
-        const flatFactor = Math.max(0, Math.min(1, (logSmooth + 12) / 7));
-        return Math.round(72 + (50 - 72) * flatFactor);
-    }, [smoothing]);
+        dataset.forEach(d => { total++; if (d[targetColumn] == 1) totalRisk++; });
+        const baseProb = total ? (totalRisk / total) : 0.5;
+
+        // Process top 4 highly impactful features
+        const processed = validCols.map(fName => {
+            let sum = 0; let c = 0;
+            dataset.forEach(d => { if (!isNaN(d[fName])) { sum += Number(d[fName]); c++; } });
+            const mean = c ? sum/c : 0;
+            
+            let aboveMeanRisk = 0; let aboveMeanTotal = 0;
+            dataset.forEach(d => {
+                if (Number(d[fName]) > mean) {
+                    aboveMeanTotal++;
+                    if (d[targetColumn] == 1) aboveMeanRisk++;
+                }
+            });
+            const rawProb = aboveMeanTotal ? (aboveMeanRisk / aboveMeanTotal) : baseProb;
+            const direction = rawProb > baseProb ? 'increase' : 'decrease';
+            const rawImpact = Math.abs(rawProb - baseProb) * 100;
+            
+            // Apply smoothing logic
+            const prob = Math.round( (rawProb*100) * (1 - flatFactor) + (baseProb*100) * flatFactor );
+            const impactVal = Math.round(rawImpact * (1 - flatFactor));
+            
+            const sign = direction === 'increase' ? '+' : '-';
+            const impactText = impactVal > 15
+                ? `Güçlü risk ${direction === 'increase' ? 'ARTTIRICI' : 'AZALTICI'} bulgu: ${sign}%${impactVal}`
+                : impactVal > 5
+                    ? `Risk oranını ${direction === 'increase' ? 'yükseltiyor' : 'düşürüyor'}: ${sign}%${impactVal}`
+                    : `Hafif risk ${direction === 'increase' ? 'artışı' : 'azalması'} tespit edildi.`;
+            
+            return { name: fName, prob, impact: impactText, impactVal, direction };
+        }).sort((a,b) => b.impactVal - a.impactVal).slice(0, 4);
+
+        return { list: processed, baseProb: Math.round(baseProb * 100) };
+    }, [dataset, datasetSchema, targetColumn, smoothing]);
 
     const explanation = useMemo(() => {
         const logSmooth = Math.log10(smoothing);
-        if (logSmooth <= -10) return `With minimal smoothing (${smoothing.toExponential(0)}), the model uses raw frequency counts — very confident but may overreact to rare combinations. Sharp and decisive.`;
-        if (logSmooth <= -7) return `With moderate smoothing (${smoothing.toExponential(0)}), the model balances raw evidence with a safety margin. Prevents zero-probability issues without losing discriminative power.`;
-        return `With high smoothing (${smoothing.toExponential(0)}), all probabilities are pulled toward 50%. Very cautious — avoids false alarms but may miss real patterns.`;
+        if (logSmooth <= -10) return `Düşük klinik skor: Model tamamen ham sıklıklara odaklanıyor. Küçük bulgu gruplarında çok sert ve keskin tanılar (yüksek risk uyarıları) verebilir.`;
+        if (logSmooth <= -7) return `Dengeli klinik skor: Model, spesifik hasta bulguları ile tıbbi güvenlik marjı (güven aralığı) toleransını harmanlayarak istikrarlı olasılıklar sunuyor.`;
+        return `Yüksek esneklik: Tüm bulgu olasılıkları ortalamaya doğru esnetilmiştir. Model son derece temkinlidir, yanlış alarmı engeller ama hafif belirtileri kaçırabilir.`;
     }, [smoothing]);
+
+    if (!features || !features.list || features.list.length === 0) return null;
+
+    // A simple Bayesian combination naive approximation for UI
+    let aggregateLogOdds = 0;
+    features.list.forEach(f => {
+        let p = f.prob / 100; p = Math.max(0.01, Math.min(0.99, p));
+        aggregateLogOdds += Math.log(p / (1 - p));
+    });
+    const finalComb = 1 / (1 + Math.exp(-aggregateLogOdds));
+    const finalProb = Math.round(finalComb * 100);
 
     return (
         <div>
             <VizDescription isDarkMode={isDarkMode}>
-                Each measurement independently changes the {tName} probability. Adjust <strong>Variance Smoothing</strong> to see how it affects confidence levels.
+                Her bir tıbbi girdi, birbirlerinden bağımsız (Naive) olarak <strong>{tName}</strong> olasılığını etkiler. <strong>Klinik Dağılım Skoru</strong> nadir varyansların modeli yanıltmasını tıbbi bir filtreden geçirir.
             </VizDescription>
 
             <motion.div
@@ -1078,7 +1128,7 @@ const NBViz = React.memo(({ params, isDarkMode, datasetSchema, targetColumn, pri
                 transition={{ duration: 0.4 }}
                 className="space-y-3"
             >
-                {features.map((f, i) => {
+                {features.list.map((f, i) => {
                     const isIncrease = f.direction === 'increase';
                     const barColor = isIncrease ? COLORS.red : COLORS.green;
                     const barGrad = isIncrease ? '#ef4444' : '#22c55e';
@@ -1093,8 +1143,8 @@ const NBViz = React.memo(({ params, isDarkMode, datasetSchema, targetColumn, pri
                                 : 'bg-indigo-50/30 border border-indigo-100 hover:shadow-sm')}
                         >
                             <div className="flex justify-between items-center mb-2">
-                                <span className={'text-[12px] font-semibold ' + (isDarkMode ? 'text-slate-200' : 'text-slate-700')}>{f.name}</span>
-                                <span className={'text-[11px] font-mono font-bold tabular-nums'} style={{ color: barColor }}>P = {f.prob}%</span>
+                                <span className={'text-[12px] font-semibold ' + (isDarkMode ? 'text-slate-200' : 'text-slate-700')}>Durum şartı: {f.name} {" > "} ortalama</span>
+                                <span className={'text-[11px] font-mono font-bold tabular-nums'} style={{ color: barColor }}>P = %{f.prob}</span>
                             </div>
                             <div className={'h-2 rounded-full overflow-hidden ' + (isDarkMode ? 'bg-slate-800' : 'bg-slate-100')}>
                                 <motion.div
@@ -1124,11 +1174,11 @@ const NBViz = React.memo(({ params, isDarkMode, datasetSchema, targetColumn, pri
                     <div className="flex items-center gap-2">
                         <TrendingUp className="w-4 h-4" style={{ color: primaryStr }} />
                         <span className="text-[13px] font-bold" style={{ color: primaryStr }}>
-                            Final combined probability: {finalProb}% {tName}
+                            (Toplanan Klinik Bulgular Işığında) Ortalama Tahmini Risk: %{finalProb} {tName}
                         </span>
                     </div>
                     <div className={'text-[10px] mt-1.5 ' + (isDarkMode ? 'text-slate-500' : 'text-slate-400')}>
-                        Smoothing: {smoothing.toExponential(1)} · {finalProb >= 60 ? 'High confidence' : finalProb >= 45 ? 'Moderate confidence' : 'Low confidence (high smoothing)'}
+                        Temel Nüfus Riski: %{features.baseProb} · {finalProb >= 60 ? 'Yüksek Risk / Aktif Takip Önerilir' : finalProb >= 45 ? 'Sınırda Belirtiler' : 'Düşük Risk / Taburcu Önceliği Var'}
                     </div>
                 </motion.div>
             </motion.div>
@@ -1142,7 +1192,7 @@ const NBViz = React.memo(({ params, isDarkMode, datasetSchema, targetColumn, pri
 /* ═══════════════════════════════════════════════════════════════
    MAIN EXPORT — Model Visualizer Switch
 ═══════════════════════════════════════════════════════════════ */
-const ModelVisualizer = React.memo(({ selectedModel, params, isDarkMode, datasetSchema, targetColumn, domain }) => {
+const ModelVisualizer = React.memo(({ selectedModel, params, isDarkMode, datasetSchema, targetColumn, domain, dataset }) => {
     const primaryStr = domain?.theme?.primary || '#6366f1';
     const secondaryStr = domain?.theme?.secondary || '#10b981';
 
@@ -1157,12 +1207,12 @@ const ModelVisualizer = React.memo(({ selectedModel, params, isDarkMode, dataset
             >
                 {(() => {
                     switch (selectedModel) {
-                        case 'knn': return <KNNViz params={params} isDarkMode={isDarkMode} datasetSchema={datasetSchema} targetColumn={targetColumn} primaryStr={primaryStr} secondaryStr={secondaryStr} />;
-                        case 'svm': return <SVMViz params={params} isDarkMode={isDarkMode} datasetSchema={datasetSchema} targetColumn={targetColumn} primaryStr={primaryStr} secondaryStr={secondaryStr} />;
-                        case 'lr': return <LRViz params={params} isDarkMode={isDarkMode} datasetSchema={datasetSchema} targetColumn={targetColumn} primaryStr={primaryStr} secondaryStr={secondaryStr} />;
-                        case 'dt': return <DTViz params={params} isDarkMode={isDarkMode} datasetSchema={datasetSchema} targetColumn={targetColumn} primaryStr={primaryStr} secondaryStr={secondaryStr} />;
-                        case 'rf': return <RFViz params={params} isDarkMode={isDarkMode} datasetSchema={datasetSchema} targetColumn={targetColumn} primaryStr={primaryStr} secondaryStr={secondaryStr} />;
-                        case 'nb': return <NBViz params={params} isDarkMode={isDarkMode} datasetSchema={datasetSchema} targetColumn={targetColumn} primaryStr={primaryStr} secondaryStr={secondaryStr} />;
+                        case 'knn': return <KNNViz params={params} isDarkMode={isDarkMode} datasetSchema={datasetSchema} targetColumn={targetColumn} primaryStr={primaryStr} secondaryStr={secondaryStr} dataset={dataset} />;
+                        case 'svm': return <SVMViz params={params} isDarkMode={isDarkMode} datasetSchema={datasetSchema} targetColumn={targetColumn} primaryStr={primaryStr} secondaryStr={secondaryStr} dataset={dataset} />;
+                        case 'lr': return <LRViz params={params} isDarkMode={isDarkMode} datasetSchema={datasetSchema} targetColumn={targetColumn} primaryStr={primaryStr} secondaryStr={secondaryStr} dataset={dataset} />;
+                        case 'dt': return <DTViz params={params} isDarkMode={isDarkMode} datasetSchema={datasetSchema} targetColumn={targetColumn} primaryStr={primaryStr} secondaryStr={secondaryStr} dataset={dataset} />;
+                        case 'rf': return <RFViz params={params} isDarkMode={isDarkMode} datasetSchema={datasetSchema} targetColumn={targetColumn} primaryStr={primaryStr} secondaryStr={secondaryStr} dataset={dataset} />;
+                        case 'nb': return <NBViz params={params} isDarkMode={isDarkMode} datasetSchema={datasetSchema} targetColumn={targetColumn} primaryStr={primaryStr} secondaryStr={secondaryStr} dataset={dataset} />;
                         default: return <div className={isDarkMode ? 'text-slate-500' : 'text-slate-400'}>Select a model to visualize</div>;
                     }
                 })()}

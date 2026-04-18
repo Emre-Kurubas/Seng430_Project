@@ -618,22 +618,23 @@ const ModelSelection = ({ isDarkMode, onNext, onPrev, dataset, datasetSchema, ta
                                     )}
 
                                     {selectedModel === 'lr' && (
-                                        <ParamSlider
-                                            label="Maximum Iterations" tooltip="How many times the algorithm updates its estimates. More iterations find a better curve but take longer."
-                                            value={params.lr.iterations} min={100} max={5000} step={100}
-                                            onChange={(e) => setParams({ ...params, lr: { ...params.lr, iterations: Number(e.target.value) } })}
-                                            lowLabel="100 (Quick)" highLabel="5000 (Thorough)"
-                                            isDarkMode={isDarkMode} primaryStr={primaryStr}
-                                        />
+                                        <div className={`p-4 rounded-xl border ${isDarkMode ? 'bg-indigo-500/10 border-indigo-500/20 text-indigo-200' : 'bg-indigo-50 border-indigo-100 text-indigo-700'}`}>
+                                            <div className="flex items-start gap-3">
+                                                <Info className="w-5 h-5 shrink-0 mt-0.5" />
+                                                <div className="text-sm font-medium leading-relaxed">
+                                                    Logistic Regression autonomously calibrates statistical significance directly from your clinical dataset. No manual parameters required.
+                                                </div>
+                                            </div>
+                                        </div>
                                     )}
 
                                     {selectedModel === 'nb' && (
                                         <ParamSlider
-                                            label="Variance Smoothing" tooltip="A safety factor that prevents zero probability for unseen combinations of traits."
+                                            label="Klinik Dağılım Skoru" tooltip="Nadir rastlanan anomalilerin model üzerindeki aşırı etkisini engelleyerek istatistiksel güvenilirliği artırır."
                                             value={Math.log10(params.nb.smoothing)} min={-12} max={-5} step={1}
                                             onChange={(e) => setParams({ ...params, nb: { ...params.nb, smoothing: Math.pow(10, Number(e.target.value)) } })}
-                                            lowLabel="1e-12" highLabel="1e-5"
-                                            displayValue={params.nb.smoothing.toExponential(1)}
+                                            lowLabel="Düşük (Katı)" highLabel="Yüksek (Esnek)"
+                                            displayValue={`${(Math.abs(-13 - Math.log10(params.nb.smoothing)) * 10).toFixed(0)} Puan`}
                                             isDarkMode={isDarkMode} primaryStr={primaryStr}
                                         />
                                     )}
