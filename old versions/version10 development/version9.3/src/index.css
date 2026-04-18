@@ -1,0 +1,559 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+/* Tailwind */
+@import "tailwindcss";
+@config "../tailwind.config.js";
+
+/* Custom Cursor — rounded organic pointer */
+* {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cpath d='M8.5 4C8.2 3.7 7.7 3.9 7.7 4.3L7 22.5C7 22.9 7.5 23.2 7.8 22.9L12.5 18.5C12.7 18.3 13 18.3 13.2 18.5L16.2 23.8C16.4 24.1 16.7 24.2 17 24L19 22.8C19.3 22.6 19.4 22.3 19.2 22L16.2 16.8C16 16.5 16.1 16.2 16.4 16.1L22.5 14.5C22.9 14.4 23 13.9 22.7 13.6L8.5 4Z' fill='white' stroke='%231a1a1a' stroke-width='2' stroke-linejoin='round' stroke-linecap='round'/%3E%3C/svg%3E") 7 4, auto !important;
+}
+
+button, a, select, input[type='range'], label, 
+[role='button'], .sidebar-nav-item, .macos-icon-btn,
+.action-button, .ios-card, .model-card {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cpath d='M8.5 6C8.2 5.7 7.7 5.9 7.7 6.3L7 22.5C7 22.9 7.5 23.2 7.8 22.9L12.5 18.5C12.7 18.3 13 18.3 13.2 18.5L16.2 23.8C16.4 24.1 16.7 24.2 17 24L19 22.8C19.3 22.6 19.4 22.3 19.2 22L16.2 16.8C16 16.5 16.1 16.2 16.4 16.1L22.5 14.5C22.9 14.4 23 13.9 22.7 13.6L8.5 6Z' fill='%23e8e8ee' stroke='%231a1a1a' stroke-width='2' stroke-linejoin='round' stroke-linecap='round'/%3E%3Cline x1='3' y1='3' x2='1' y2='1' stroke='%231a1a1a' stroke-width='1.8' stroke-linecap='round'/%3E%3Cline x1='6' y1='1.5' x2='5.5' y2='0' stroke='%231a1a1a' stroke-width='1.8' stroke-linecap='round'/%3E%3Cline x1='1.5' y1='6' x2='0' y2='5.5' stroke='%231a1a1a' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E") 7 6, pointer !important;
+}
+
+:root {
+  --app-bg: #1c1c1e; /* Solid dark outer shell for dashboard layout */
+  --dashboard-bg: #f3f4f6; /* Inner main content light gray */
+  --sidebar-bg: transparent; 
+  --bg-card: #ffffff; /* Solid bento card style */
+  --bg-card-solid: #ffffff;
+  --bg-card-secondary: #f9fafb;
+  --text-main: #111827;
+  --text-sec: #6b7280;
+  --text-tertiary: #9ca3af;
+  --border: rgba(0, 0, 0, 0.05);
+  --border-strong: rgba(0, 0, 0, 0.1);
+
+  /* Apple Palette */
+  --ios-blue: #007aff;
+  --ios-green: #34c759;
+  --ios-indigo: #5856d6;
+  --ios-orange: #ff9500;
+  --ios-pink: #ff2d55;
+  --ios-purple: #af52de;
+  --ios-red: #ff3b30;
+  --ios-teal: #5ac8fa;
+  --ios-yellow: #ffcc00;
+
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.03), 0 1px 2px rgba(0,0,0,0.02);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.02);
+  --shadow-lg: 0 12px 32px rgba(0,0,0,0.06), 0 4px 12px rgba(0,0,0,0.02);
+  --shadow-glow: none;
+
+  --radius-sm: 16px;
+  --radius-md: 24px;
+  --radius-lg: 32px;
+}
+
+[data-theme="dark"], html.dark {
+  --app-bg: #09090b;
+  --dashboard-bg: #121214;
+  --sidebar-bg: transparent;
+  --bg-card: #1c1c1e;
+  --bg-card-solid: #1c1c1e;
+  --bg-card-secondary: #27272a;
+  --text-main: #fcfcfd;
+  --text-sec: #a1a1aa;
+  --text-tertiary: #71717a;
+  --border: rgba(255, 255, 255, 0.05);
+  --border-strong: rgba(255, 255, 255, 0.1);
+
+  /* Vibrant dark */
+  --ios-blue: #0a84ff;
+  --ios-green: #30d158;
+  --ios-indigo: #5e5ce6;
+  --ios-orange: #ff9f0a;
+  --ios-pink: #ff375f;
+  --ios-purple: #bf5af2;
+  --ios-red: #ff453a;
+  --ios-teal: #64d2ff;
+  --ios-yellow: #ffd60a;
+
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.35);
+  --shadow-lg: 0 12px 40px rgba(0,0,0,0.5);
+  --shadow-glow: 0 0 0 1px rgba(255,255,255,0.08) inset;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  background-color: var(--app-bg);
+  color: var(--text-main);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.5s ease, color 0.5s ease;
+  overflow-x: hidden;
+  min-height: 100vh;
+}
+
+/* macOS-style scrollbar */
+::-webkit-scrollbar { width: 10px; background: transparent; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: rgba(128, 128, 128, 0.25);
+  border-radius: 10px;
+  border: 2px solid var(--app-bg);
+}
+::-webkit-scrollbar-thumb:hover { background: rgba(128, 128, 128, 0.4); }
+
+/* Premium Range Sliders */
+.premium-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  outline: none;
+}
+.premium-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 1px solid rgba(0,0,0,0.1);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15), 0 1px 2px rgba(0,0,0,0.1);
+  cursor: grab;
+  margin-top: -7px; /* Center thumb on track */
+  transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s;
+}
+.premium-slider:active::-webkit-slider-thumb {
+  transform: scale(1.15);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2), 0 2px 4px rgba(0,0,0,0.15);
+  cursor: grabbing;
+}
+[data-theme="dark"] .premium-slider::-webkit-slider-thumb, 
+html.dark .premium-slider::-webkit-slider-thumb {
+  background: #2c2c2e;
+  border: 1px solid rgba(255,255,255,0.15);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1);
+}
+.premium-slider::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 6px;
+  border: none;
+}
+
+/* ─── Typography ─── */
+h1, h2, h3, h4, h5 {
+  font-family: inherit;
+  letter-spacing: -0.025em;
+}
+
+.hero-title {
+  font-size: 3.2rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1.08;
+  margin-bottom: 14px;
+  background: linear-gradient(135deg, var(--text-main) 30%, var(--text-sec) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero-subtitle {
+  font-size: 1.15rem;
+  color: var(--text-sec);
+  font-weight: 500;
+  line-height: 1.6;
+  letter-spacing: -0.01em;
+}
+
+.section-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-bottom: 20px;
+  letter-spacing: -0.02em;
+}
+
+/* ─── Dashboard Layout Revamp ─── */
+.dashboard-wrapper {
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  display: flex;
+}
+
+.dashboard-container {
+  display: flex;
+  width: 100%;
+  height: 100vh;
+  box-sizing: border-box;
+  padding: 12px;
+}
+
+.dashboard-sidebar {
+  width: 260px;
+  display: flex;
+  flex-direction: column;
+  padding: 24px 20px;
+  background: var(--sidebar-bg);
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.sidebar-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 48px;
+  padding: 0 8px;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex-grow: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 8px;
+}
+
+.sidebar-nav::-webkit-scrollbar { width: 4px; }
+.sidebar-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+.sidebar-nav::-webkit-scrollbar-track { background: transparent; }
+
+.sidebar-nav-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  border-radius: 999px; /* Pill shape */
+  background: transparent;
+  color: #a1a1aa;
+  border: none;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.sidebar-nav-item:hover:not(.locked) {
+  color: #fff;
+  background: rgba(255,255,255,0.05);
+}
+
+.sidebar-nav-item.active {
+  background: #fff;
+  color: #09090b;
+  font-weight: 600;
+}
+
+.nav-item-content {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.nav-badge {
+  background: #ccff00;
+  color: #000;
+  font-size: 0.7rem;
+  font-weight: 700;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.sidebar-nav-item.locked {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.sidebar-promo {
+  background: #ccff00;
+  border-radius: 24px;
+  padding: 20px;
+  text-align: left;
+  color: #000;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(204,255,0,0.15);
+}
+
+.promo-btn {
+  background: #1a1a1c;
+  color: #fff;
+  width: 100%;
+  padding: 12px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.promo-btn:hover {
+  transform: scale(1.03);
+}
+
+.app-layout {
+  flex-grow: 1;
+  background: var(--dashboard-bg);
+  border-radius: 36px;
+  padding: 80px 120px 80px 48px;
+  position: relative;
+  z-index: 10;
+  overflow-y: auto;
+  overflow-x: hidden;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+  margin-left: 12px;
+}
+
+/* Scrollbar scoped to main body */
+.app-layout::-webkit-scrollbar { width: 8px; }
+.app-layout::-webkit-scrollbar-track { background: transparent; }
+.app-layout::-webkit-scrollbar-thumb {
+  background: rgba(128,128,128,0.2);
+  border-radius: 8px;
+}
+
+/* ─── Bento Cards ─── */
+.ios-card {
+  background: var(--bg-card);
+  border-radius: var(--radius-md);
+  padding: 32px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-md), var(--shadow-glow);
+  margin-bottom: 20px;
+  position: relative;
+  overflow: hidden;
+  transition:
+    transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1),
+    box-shadow 0.35s ease,
+    border-color 0.3s ease;
+}
+
+.ios-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+  opacity: 0.6;
+}
+
+.ios-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg), var(--shadow-glow);
+  border-color: var(--border-strong);
+}
+
+/* ─── Lists ─── */
+.ios-list {
+  background: var(--bg-card);
+  backdrop-filter: blur(40px) saturate(1.6);
+  -webkit-backdrop-filter: blur(40px) saturate(1.6);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-md), var(--shadow-glow);
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+.ios-list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  transition: background 0.15s ease;
+}
+
+.ios-list-item:hover {
+  background: rgba(128, 128, 128, 0.04);
+}
+
+.ios-list-item:last-child { border-bottom: none; }
+
+.ios-list-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.ios-list-subtitle {
+  font-size: 0.82rem;
+  color: var(--text-sec);
+}
+
+/* ─── Bottom Dock (macOS Dock inspired) ─── */
+.bottom-nav-container {
+  position: fixed;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 0;
+  z-index: 100;
+}
+
+.bottom-nav {
+  background: var(--bg-card);
+  backdrop-filter: blur(40px) saturate(1.8);
+  -webkit-backdrop-filter: blur(40px) saturate(1.8);
+  padding: 8px 14px;
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--border);
+  box-shadow:
+    var(--shadow-lg),
+    0 0 0 1px rgba(255,255,255,0.15) inset,
+    0 -1px 2px rgba(0,0,0,0.05) inset;
+}
+
+[data-theme="dark"] .bottom-nav, html.dark .bottom-nav {
+  box-shadow:
+    var(--shadow-lg),
+    0 0 0 1px rgba(255,255,255,0.06) inset,
+    0 -1px 2px rgba(0,0,0,0.2) inset;
+}
+
+.nav-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-sec);
+  opacity: 0.35;
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.nav-dot:hover:not(.active) {
+  opacity: 0.6;
+  transform: scale(1.4);
+}
+
+.nav-dot.active {
+  opacity: 1;
+  transform: scale(1.8);
+  background: var(--ios-blue);
+  box-shadow: 0 0 8px rgba(0,122,255,0.4);
+}
+
+/* ─── Icon Buttons (nav arrows) ─── */
+.btn-icon {
+  background: transparent;
+  border: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-main);
+  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.btn-icon:hover:not(:disabled) {
+  background: rgba(128, 128, 128, 0.12);
+  transform: scale(1.08);
+}
+
+.btn-icon:active:not(:disabled) { transform: scale(0.92); }
+.btn-icon:disabled { opacity: 0.3; cursor: not-allowed; }
+
+/* ─── Action Buttons (macOS style) ─── */
+.action-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 7px 16px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  border: 1px solid var(--border-strong);
+  background: var(--bg-card);
+  backdrop-filter: blur(20px);
+  color: var(--text-main);
+  box-shadow: var(--shadow-sm);
+}
+
+.action-button:hover:not(:disabled) {
+  background: var(--bg-card-secondary);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.action-button:active:not(:disabled) {
+  transform: scale(0.97);
+  box-shadow: var(--shadow-sm);
+}
+
+.action-button.primary {
+  background: var(--ios-blue);
+  color: #fff;
+  border: 1px solid rgba(0,0,0,0.1);
+  box-shadow: 0 2px 8px rgba(0,122,255,0.3);
+}
+
+.action-button.primary:hover:not(:disabled) {
+  background: #0066d6;
+  box-shadow: 0 4px 16px rgba(0,122,255,0.4);
+  transform: translateY(-1px);
+}
+
+.action-button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+[data-theme="dark"] .action-button:active:not(:disabled),
+html.dark .action-button:active:not(:disabled) {
+  background: rgba(255,255,255,0.08);
+}
+
+/* ─── Top Bar Icon Buttons ─── */
+.macos-icon-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--bg-card);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.macos-icon-btn:hover {
+  background: var(--bg-card-secondary);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.macos-icon-btn:active {
+  transform: scale(0.93);
+  box-shadow: none;
+}
+
+/* No-scrollbar utility for dropdowns */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ─── Utilities ─── */
+.flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
