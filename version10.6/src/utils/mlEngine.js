@@ -13,11 +13,12 @@ import SVM from 'ml-svm';
 // then classifies via log-sum of log-likelihoods + log-prior.
 // ─────────────────────────────────────────────────────────────────────────────
 class GaussianNBClassifier {
-    constructor() {
+    constructor(smoothing = 1e-9) {
         this.classes = [];
         this.priors = {};
         this.means = {};
         this.vars = {};
+        this.smoothing = smoothing;
     }
 
     train(X, y) {
@@ -26,19 +27,33 @@ class GaussianNBClassifier {
         const n = X.length;
         const nFeatures = X[0].length;
 
+        // Phase 1: Compute raw means and variances per class per feature
+        const rawVars = {};
         classSet.forEach(c => {
             const rows = X.filter((_, i) => y[i] === c);
             this.priors[c] = Math.log(rows.length / n);
             this.means[c] = [];
-            this.vars[c] = [];
+            rawVars[c] = [];
             for (let f = 0; f < nFeatures; f++) {
                 const vals = rows.map(r => r[f]);
                 const mean = vals.reduce((a, b) => a + b, 0) / vals.length;
                 const variance = vals.reduce((s, v) => s + (v - mean) ** 2, 0) / vals.length;
                 this.means[c].push(mean);
-                // Add Laplace smoothing (1e-9) to avoid log(0)
-                this.vars[c].push(variance + 1e-9);
+                rawVars[c].push(variance);
             }
+        });
+
+        // Phase 2: Find maximum variance across all classes & features (scikit-learn style)
+        let maxVar = 0;
+        classSet.forEach(c => {
+            rawVars[c].forEach(v => { if (v > maxVar) maxVar = v; });
+        });
+
+        // Phase 3: Add smoothing * maxVar to all variances
+        // This makes the smoothing parameter scale-relative to the data
+        const epsilon = this.smoothing * maxVar;
+        classSet.forEach(c => {
+            this.vars[c] = rawVars[c].map(v => v + Math.max(epsilon, 1e-12));
         });
     }
 
@@ -378,7 +393,10 @@ export async function runMLTraining(modelId, params, dataset, datasetSchema, tar
                     nEstimators: nTrees,
                     maxFeatures: Math.min(0.7, Math.max(0.3, 4 / (rfXTrain[0]?.length || 1))),
                     seed: 42,
-                    useSampleBagging: true
+                    useSampleBagging: true,
+                    treeOptions: {
+                        maxDepth: params.maxDepth || 10,
+                    },
                 });
                 trainedModel.train(rfXTrain, rfYTrain);
                 predictFn = (X) => trainedModel.predict(X);
@@ -406,7 +424,7 @@ export async function runMLTraining(modelId, params, dataset, datasetSchema, tar
 
             } else if (modelId === 'nb') {
                 // Using our inline GaussianNBClassifier (ml-naivebayes package is broken)
-                trainedModel = new GaussianNBClassifier();
+                trainedModel = new GaussianNBClassifier(params.smoothing || 1e-9);
                 trainedModel.train(XTrain, yTrain);
                 predictFn = (X) => trainedModel.predict(X);
 

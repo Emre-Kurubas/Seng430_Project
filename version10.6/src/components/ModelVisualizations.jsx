@@ -143,7 +143,7 @@ const formatFeatureName = (name) => {
 /* ═══════════════════════════════════════════════════════════════
    1. KNN — Scatter Plot with K-Radius
 ═══════════════════════════════════════════════════════════════ */
-const KNNViz = React.memo(({ params, isDarkMode, datasetSchema, targetColumn, primaryStr, secondaryStr, trainedModelResult }) => {
+const KNNViz = React.memo(({ params, isDarkMode, datasetSchema, targetColumn, primaryStr, secondaryStr }) => {
     const canvasRef = useRef(null);
     const COLORS = getColors(isDarkMode);
     const k = params.knn.k;
@@ -152,32 +152,13 @@ const KNNViz = React.memo(({ params, isDarkMode, datasetSchema, targetColumn, pr
     const fNames = getFeatureNames(datasetSchema);
     const tName = targetColumn || 'Outcome';
 
-    // Use real test-set points from the trained model when available,
-    // otherwise fall back to the static demo points.
-    const pts = useMemo(() => {
-        const XTest = trainedModelResult?.XTest;
-        const yTest = trainedModelResult?.yTest;
-        if (XTest && XTest.length > 1 && XTest[0].length >= 2) {
-            const sample = XTest.slice(0, 80);
-            const ySlice = yTest ? yTest.slice(0, 80) : sample.map(() => 0);
-            // Normalise first two features to [0.05, 0.95]
-            let min0 = Infinity, max0 = -Infinity, min1 = Infinity, max1 = -Infinity;
-            sample.forEach(r => { if (r[0] < min0) min0 = r[0]; if (r[0] > max0) max0 = r[0]; if (r[1] < min1) min1 = r[1]; if (r[1] > max1) max1 = r[1]; });
-            const r0 = (max0 - min0) || 1; const r1 = (max1 - min1) || 1;
-            return sample.map((r, i) => [
-                0.05 + ((r[0] - min0) / r0) * 0.9,
-                0.05 + ((r[1] - min1) / r1) * 0.9,
-                ySlice[i]
-            ]);
-        }
-        return [
-            [0.2, 0.3, 0], [0.25, 0.55, 0], [0.15, 0.65, 1], [0.3, 0.75, 1], [0.4, 0.4, 0],
-            [0.5, 0.25, 0], [0.45, 0.6, 1], [0.55, 0.7, 1], [0.65, 0.45, 0], [0.7, 0.6, 1],
-            [0.75, 0.3, 0], [0.8, 0.65, 1], [0.35, 0.2, 0], [0.6, 0.8, 1], [0.85, 0.4, 0],
-            [0.1, 0.45, 1], [0.9, 0.7, 1], [0.6, 0.15, 0], [0.28, 0.42, 0], [0.52, 0.48, 1],
-            [0.38, 0.85, 1], [0.72, 0.18, 0], [0.18, 0.22, 0], [0.82, 0.52, 1], [0.42, 0.32, 0],
-        ];
-    }, [trainedModelResult]);
+    const pts = useMemo(() => [
+        [0.2, 0.3, 0], [0.25, 0.55, 0], [0.15, 0.65, 1], [0.3, 0.75, 1], [0.4, 0.4, 0],
+        [0.5, 0.25, 0], [0.45, 0.6, 1], [0.55, 0.7, 1], [0.65, 0.45, 0], [0.7, 0.6, 1],
+        [0.75, 0.3, 0], [0.8, 0.65, 1], [0.35, 0.2, 0], [0.6, 0.8, 1], [0.85, 0.4, 0],
+        [0.1, 0.45, 1], [0.9, 0.7, 1], [0.6, 0.15, 0], [0.28, 0.42, 0], [0.52, 0.48, 1],
+        [0.38, 0.85, 1], [0.72, 0.18, 0], [0.18, 0.22, 0], [0.82, 0.52, 1], [0.42, 0.32, 0],
+    ], []);
 
     const newPt = useMemo(() => [0.48, 0.52], []);
 
@@ -598,10 +579,6 @@ const SVMViz = React.memo(({ params, isDarkMode, datasetSchema, targetColumn, pr
             <VizDescription isDarkMode={isDarkMode}>
                 SVM draws a boundary to separate patient groups based on {fNames[0]} and {fNames[1]}. <strong>Support vectors</strong> (outlined) are edge cases on the fence. Adjust <strong>C</strong> to see how strictness changes the margin.
             </VizDescription>
-            {/* Approximation notice — SVM boundary shown is a mathematical model, not pixel-perfect from the solver */}
-            <div className={'mb-2 px-3 py-1.5 rounded-lg text-[11px] font-semibold flex items-center gap-2 w-fit ' + (isDarkMode ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 'bg-amber-50 text-amber-600 border border-amber-200')}>
-                <span>⚠️</span> Decision boundary is illustrative — exact SVM boundary is high-dimensional
-            </div>
             <motion.canvas ref={canvasRef} style={getVizCanvasStyle(isDarkMode)} initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.4 }} />
             <LegendRow isDarkMode={isDarkMode} primaryStr={primaryStr} items={[
                 { color: COLORS.red, label: tName },
@@ -866,55 +843,50 @@ const RFViz = React.memo(({ params, isDarkMode, datasetSchema, targetColumn, pri
     const COLORS = getColors(isDarkMode);
     const { trees } = params.rf;
     const n = trees;
+    const MAX_VISIBLE = 20; // cap the grid to 20 cards for readability
     const tName = targetColumn || 'Outcome';
 
     const voteData = useMemo(() => {
-        // Prefer real per-estimator votes exported from mlEngine
-        const perEst = trainedModelResult?.perEstimatorVotes;
-        if (perEst && perEst.length > 0) {
-            // perEst[estimatorIdx][sampleIdx] -> predicted label
-            // Show up to 'n' estimators (may be fewer if model used fewer)
-            const showCount = Math.min(n, perEst.length);
-            const treeVotes = [];
-            let posVotes = 0;
-            for (let i = 0; i < showCount; i++) {
-                // majority vote for this estimator over all test samples
-                const votes = perEst[i];
-                const pos = votes.filter(v => v === 1).length;
-                const vote = pos >= votes.length / 2 ? 1 : 0;
-                treeVotes.push(vote);
-                if (vote === 1) posVotes++;
-            }
-            const negVotes = showCount - posVotes;
-            const posPct = Math.round((posVotes / showCount) * 100);
-            const negPct = 100 - posPct;
-            const displayTrees = treeVotes.map((vote, i) => ({ id: i, vote: vote === 1 ? 'positive' : 'negative' }));
-            return { posVotes, negVotes, posPct, negPct, displayTrees };
+        // ── Try to use real per-estimator votes from the trained model ──────────
+        const realVotes = trainedModelResult?.perEstimatorVotes; // [estIdx][sampleIdx] -> label
+        if (realVotes && realVotes.length > 0) {
+            // Majority vote per estimator across all test samples
+            const treeVotes = realVotes.map(estVotes => {
+                const pos = estVotes.filter(v => Number(v) >= 0.5).length;
+                return pos >= estVotes.length / 2 ? 1 : 0;
+            });
+            const posVotes = treeVotes.filter(v => v === 1).length;
+            const negVotes = treeVotes.length - posVotes;
+            const posPct = Math.round((posVotes / treeVotes.length) * 100);
+            const displayTrees = treeVotes.slice(0, MAX_VISIBLE).map((vote, i) => ({ id: i, vote: vote === 1 ? 'positive' : 'negative' }));
+            return { posVotes, negVotes, posPct, negPct: 100 - posPct, displayTrees };
         }
 
-        // Fallback: use dataset base rate to seed the display when model not yet trained
+        // ── Fallback: derive base-rate from dataset and simulate with LCG ─────
         let actualBaseRate = 0.5;
         if (dataset && dataset.length > 0 && targetColumn) {
             const targetValues = [...new Set(dataset.map(row => row[targetColumn]).filter(v => v !== undefined && v !== ''))];
             const posClass = targetValues.length > 1 ? targetValues[1] : targetValues[0];
-            const posCount = dataset.filter(r => r[targetColumn] === posClass).length;
-            actualBaseRate = posCount / dataset.length;
+            const posCount = dataset.filter(r => String(r[targetColumn]) === String(posClass)).length;
+            actualBaseRate = posCount / (dataset.length || 1);
         }
-        const seededRandom = (i) => { const x = Math.sin(i * 12.9898 + (actualBaseRate * 100)) * 43758.5453; return x - Math.floor(x); };
+
+        // LCG produces a much more uniform distribution than sin() for small n
+        let seed = Math.round(actualBaseRate * 1000) + 17;
+        const lcg = () => { seed = (seed * 1664525 + 1013904223) & 0xffffffff; return (seed >>> 0) / 0x100000000; };
+
         let posVotes = 0;
         const treeVotes = [];
         for (let i = 0; i < n; i++) {
-            const isPos = seededRandom(i) < actualBaseRate;
-            const vote = isPos ? 1 : 0;
+            const vote = lcg() < actualBaseRate ? 1 : 0;
             treeVotes.push(vote);
             if (vote === 1) posVotes++;
         }
         const negVotes = n - posVotes;
         const posPct = Math.round((posVotes / n) * 100);
-        const negPct = 100 - posPct;
-        const displayTrees = treeVotes.map((vote, i) => ({ id: i, vote: vote === 1 ? 'positive' : 'negative' }));
-        return { posVotes, negVotes, posPct, negPct, displayTrees };
-    }, [n, trainedModelResult, dataset, targetColumn]);
+        const displayTrees = treeVotes.slice(0, MAX_VISIBLE).map((vote, i) => ({ id: i, vote: vote === 1 ? 'positive' : 'negative' }));
+        return { posVotes, negVotes, posPct, negPct: 100 - posPct, displayTrees };
+    }, [n, dataset, targetColumn, trainedModelResult]);
 
     const { posVotes, negVotes, posPct, negPct, displayTrees } = voteData;
 
@@ -996,7 +968,7 @@ const RFViz = React.memo(({ params, isDarkMode, datasetSchema, targetColumn, pri
 /* ═══════════════════════════════════════════════════════════════
    5. Logistic Regression — S-Curve (Canvas)
 ═══════════════════════════════════════════════════════════════ */
-const LRViz = React.memo(({ isDarkMode, datasetSchema, targetColumn, primaryStr, secondaryStr, dataset, trainedModelResult }) => {
+const LRViz = React.memo(({ isDarkMode, datasetSchema, targetColumn, primaryStr, secondaryStr, dataset }) => {
     const canvasRef = useRef(null);
     const COLORS = getColors(isDarkMode);
     const tName = targetColumn || 'Outcome';
@@ -1005,8 +977,7 @@ const LRViz = React.memo(({ isDarkMode, datasetSchema, targetColumn, primaryStr,
         if (!dataset || dataset.length === 0 || !datasetSchema) return { patientEF: 38, xMin: 14, xMax: 80, x0: 52, fName: 'Feature', sigmoid: (val)=>0.5, kFactor: 0.1 };
         
         const numCols = datasetSchema.filter(c => (c.role === 'Number (measurement)' || c.role === 'Category') && c.name !== targetColumn).map(c => c.name);
-        const selectedFeat = numCols[0] || 'Feature';
-        const featIdx = numCols.indexOf(selectedFeat);
+        const selectedFeat = numCols[0] || 'Değer';
         
         let minV = Infinity; let maxV = -Infinity; let sum = 0; let count = 0;
         let highRiskPatient = null;
@@ -1028,22 +999,11 @@ const LRViz = React.memo(({ isDarkMode, datasetSchema, targetColumn, primaryStr,
         minV = Math.floor(minV);
         maxV = Math.ceil(maxV);
         const range = Math.max(1, maxV - minV);
+        const kF = 10 / range; // Scale steepness organically to data spread
 
-        // Use real trained LR weights when available (lrWeights = [bias, w0, w1, ...])
-        const lrWeights = trainedModelResult?.lrWeights;
-        let sigm;
-        if (lrWeights && lrWeights.length > featIdx + 1 && featIdx >= 0) {
-            const bias = lrWeights[0];
-            const coeff = lrWeights[featIdx + 1]; // +1 because index 0 is bias
-            sigm = (val) => 1 / (1 + Math.exp(-(bias + coeff * val)));
-        } else {
-            // Fallback: data-derived sigmoid (used before training completes)
-            const kF = 10 / range;
-            sigm = (val) => 1 / (1 + Math.exp(-kF * (val - meanV)));
-        }
-
-        return { patientEF: highRiskPatient, xMin: minV, xMax: maxV, x0: meanV, fName: selectedFeat, sigmoid: sigm, kFactor: 10 / range };
-    }, [dataset, datasetSchema, targetColumn, trainedModelResult]);
+        const sigm = (ef) => 1 / (1 + Math.exp(-kF * (ef - meanV))); // true logistic function
+        return { patientEF: highRiskPatient, xMin: minV, xMax: maxV, x0: meanV, fName: selectedFeat, sigmoid: sigm, kFactor: kF };
+    }, [dataset, datasetSchema, targetColumn]);
 
     const patientProb = sigmoid(patientEF);
     const patientPct = Math.round(patientProb * 100);
@@ -1188,149 +1148,338 @@ const LRViz = React.memo(({ isDarkMode, datasetSchema, targetColumn, primaryStr,
 
 
 /* ═══════════════════════════════════════════════════════════════
-   6. Naive Bayes — Feature Probability Cards
+   6. Naive Bayes — Gaussian Distribution Curves (Canvas)
+   Uses REAL trained model distributions (per-class mean/variance)
+   from the GaussianNBClassifier to draw overlapping bell curves.
 ═══════════════════════════════════════════════════════════════ */
-const NBViz = React.memo(({ params, isDarkMode, datasetSchema, targetColumn, primaryStr, secondaryStr, dataset }) => {
+const NBViz = React.memo(({ params, isDarkMode, datasetSchema, targetColumn, primaryStr, secondaryStr, dataset, trainedModelResult }) => {
     const COLORS = getColors(isDarkMode);
     const tName = targetColumn || 'Outcome';
-    const smoothing = params.nb.smoothing; // Actually representing "Clinical Distribution Score"
 
-    const features = useMemo(() => {
-        const logSmooth = Math.log10(smoothing);
-        // Map smoothing (-12 to -5) to an inner stability factor
-        const flatFactor = Math.max(0, Math.min(1, (logSmooth + 12) / 7)); 
-        
-        let total = 0; let totalRisk = 0;
-        let validCols = [];
+    // ── Extract real distributions from the trained model ─────────────
+    const vizData = useMemo(() => {
+        const distributions = trainedModelResult?.nbDistributions;
+        if (!distributions || distributions.length === 0) return null;
+
+        // Get feature names
+        let featureNames = [];
         if (datasetSchema) {
-            validCols = datasetSchema.filter(c => (c.role === 'Number (measurement)' || c.role === 'Category') && c.name !== targetColumn).map(c => c.name);
-        }
-        
-        if (!dataset || dataset.length === 0 || validCols.length === 0) {
-            return []; // fallback if missing
+            featureNames = datasetSchema
+                .filter(c => (c.role === 'Number (measurement)' || c.role === 'Category') && c.name !== targetColumn)
+                .map(c => c.name);
         }
 
-        dataset.forEach(d => { total++; if (d[targetColumn] == 1) totalRisk++; });
-        const baseProb = total ? (totalRisk / total) : 0.5;
+        const nFeatures = distributions[0]?.means?.length || 0;
+        if (nFeatures === 0) return null;
 
-        // Process top 4 highly impactful features
-        const processed = validCols.map(fName => {
-            let sum = 0; let c = 0;
-            dataset.forEach(d => { if (!isNaN(d[fName])) { sum += Number(d[fName]); c++; } });
-            const mean = c ? sum/c : 0;
-            
-            let aboveMeanRisk = 0; let aboveMeanTotal = 0;
-            dataset.forEach(d => {
-                if (Number(d[fName]) > mean) {
-                    aboveMeanTotal++;
-                    if (d[targetColumn] == 1) aboveMeanRisk++;
+        // For each feature, compute the best separation score to pick top 4
+        const featureScores = [];
+        for (let f = 0; f < nFeatures; f++) {
+            // Bhattacharyya distance approximation between class distributions
+            let separationScore = 0;
+            if (distributions.length >= 2) {
+                const m0 = distributions[0].means[f];
+                const m1 = distributions[1].means[f];
+                const v0 = distributions[0].vars[f];
+                const v1 = distributions[1].vars[f];
+                const avgVar = (v0 + v1) / 2;
+                separationScore = avgVar > 0 ? Math.abs(m0 - m1) / Math.sqrt(avgVar) : 0;
+            }
+            featureScores.push({ index: f, score: separationScore });
+        }
+        featureScores.sort((a, b) => b.score - a.score);
+        const topFeatures = featureScores.slice(0, 4);
+
+        // Build per-feature data for rendering
+        const featurePlots = topFeatures.map(({ index: f, score }) => {
+            const fName = featureNames[f] ? formatFeatureName(featureNames[f]) : `Feature ${f + 1}`;
+            const classCurves = distributions.map(d => ({
+                classLabel: d.classLabel,
+                mean: d.means[f],
+                variance: d.vars[f],
+                stddev: Math.sqrt(d.vars[f]),
+            }));
+
+            // Compute x-axis range: cover all distributions ± 3.5 sigma
+            let xMin = Infinity, xMax = -Infinity;
+            classCurves.forEach(c => {
+                xMin = Math.min(xMin, c.mean - 3.5 * c.stddev);
+                xMax = Math.max(xMax, c.mean + 3.5 * c.stddev);
+            });
+            if (xMin === xMax) { xMin -= 1; xMax += 1; }
+
+            return { featureIndex: f, featureName: fName, classCurves, xMin, xMax, separationScore: score };
+        });
+
+        // Compute overall class priors
+        const classPriors = distributions.map(d => ({
+            classLabel: d.classLabel,
+            logPrior: null, // we don't have the raw prior stored but we can derive from dataset
+        }));
+
+        return { featurePlots, classPriors, nClasses: distributions.length };
+    }, [trainedModelResult, datasetSchema, targetColumn]);
+
+    // ── Canvas refs for each feature subplot ──────────────────────────
+    const canvasRefs = useRef([]);
+
+    const drawAll = useCallback(() => {
+        if (!vizData) return;
+        const { featurePlots, nClasses } = vizData;
+
+        // Class colors — class 0 is green (safe), class 1 is red (risk)
+        const classColors = [
+            { fill: COLORS.greenSoft, stroke: COLORS.green, glow: COLORS.greenGlow, label: `Not ${tName}` },
+            { fill: COLORS.redSoft, stroke: COLORS.red, glow: COLORS.redGlow, label: tName },
+        ];
+
+        featurePlots.forEach((plot, plotIdx) => {
+            const canvas = canvasRefs.current[plotIdx];
+            if (!canvas) return;
+            const result = setupCanvas(canvas);
+            if (!result) return;
+            const { ctx, w, h } = result;
+
+            const margin = { top: 30, right: 20, bottom: 35, left: 45 };
+            const plotW = w - margin.left - margin.right;
+            const plotH = h - margin.top - margin.bottom;
+
+            // Background
+            ctx.fillStyle = COLORS.bg;
+            ctx.fillRect(0, 0, w, h);
+
+            // Grid lines
+            ctx.strokeStyle = COLORS.line;
+            ctx.lineWidth = 0.5;
+            for (let i = 0; i <= 4; i++) {
+                const y = margin.top + (plotH / 4) * i;
+                ctx.beginPath();
+                ctx.moveTo(margin.left, y);
+                ctx.lineTo(w - margin.right, y);
+                ctx.stroke();
+            }
+
+            // Axes
+            ctx.strokeStyle = COLORS.line2;
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(margin.left, margin.top);
+            ctx.lineTo(margin.left, margin.top + plotH);
+            ctx.lineTo(margin.left + plotW, margin.top + plotH);
+            ctx.stroke();
+
+            // Gaussian PDF helper
+            const gaussPDF = (x, mean, variance) => {
+                const coeff = 1 / Math.sqrt(2 * Math.PI * variance);
+                const exponent = -((x - mean) ** 2) / (2 * variance);
+                return coeff * Math.exp(exponent);
+            };
+
+            // Compute y-axis max across all class curves
+            let yMax = 0;
+            const STEPS = 200;
+            plot.classCurves.forEach(curve => {
+                for (let i = 0; i <= STEPS; i++) {
+                    const x = plot.xMin + (plot.xMax - plot.xMin) * (i / STEPS);
+                    const y = gaussPDF(x, curve.mean, curve.variance);
+                    if (y > yMax) yMax = y;
                 }
             });
-            const rawProb = aboveMeanTotal ? (aboveMeanRisk / aboveMeanTotal) : baseProb;
-            const direction = rawProb > baseProb ? 'increase' : 'decrease';
-            const rawImpact = Math.abs(rawProb - baseProb) * 100;
-            
-            // Apply smoothing logic
-            const prob = Math.round( (rawProb*100) * (1 - flatFactor) + (baseProb*100) * flatFactor );
-            const impactVal = Math.round(rawImpact * (1 - flatFactor));
-            
-            const sign = direction === 'increase' ? '+' : '-';
-            const formattedName = formatFeatureName(fName);
-            const impactText = impactVal > 15
-                ? `Major ${direction === 'increase' ? 'Risk Factor' : 'Protective Factor'} (${sign}${impactVal}% effect)`
-                : impactVal > 5
-                    ? `Moderate ${direction === 'increase' ? 'Risk Factor' : 'Protective Factor'} (${sign}${impactVal}% effect)`
-                    : `Slight ${direction === 'increase' ? 'Risk Factor' : 'Protective Factor'} (${sign}${impactVal}% effect)`;
-            
-            return { name: fName, formattedName, prob, impact: impactText, impactVal, direction };
-        }).sort((a,b) => b.impactVal - a.impactVal).slice(0, 4);
+            if (yMax === 0) yMax = 1;
+            yMax *= 1.15; // breathing room
 
-        return { list: processed, baseProb: Math.round(baseProb * 100) };
-    }, [dataset, datasetSchema, targetColumn, smoothing]);
+            // Draw each class distribution (filled area + line)
+            plot.classCurves.forEach((curve, ci) => {
+                const colorSet = classColors[ci % classColors.length];
 
+                // Filled area
+                ctx.beginPath();
+                ctx.moveTo(margin.left, margin.top + plotH);
+                for (let i = 0; i <= STEPS; i++) {
+                    const xVal = plot.xMin + (plot.xMax - plot.xMin) * (i / STEPS);
+                    const yVal = gaussPDF(xVal, curve.mean, curve.variance);
+                    const px = margin.left + (i / STEPS) * plotW;
+                    const py = margin.top + plotH * (1 - yVal / yMax);
+                    ctx.lineTo(px, py);
+                }
+                ctx.lineTo(margin.left + plotW, margin.top + plotH);
+                ctx.closePath();
+                ctx.fillStyle = colorSet.fill;
+                ctx.fill();
+
+                // Stroke line
+                ctx.beginPath();
+                for (let i = 0; i <= STEPS; i++) {
+                    const xVal = plot.xMin + (plot.xMax - plot.xMin) * (i / STEPS);
+                    const yVal = gaussPDF(xVal, curve.mean, curve.variance);
+                    const px = margin.left + (i / STEPS) * plotW;
+                    const py = margin.top + plotH * (1 - yVal / yMax);
+                    if (i === 0) ctx.moveTo(px, py);
+                    else ctx.lineTo(px, py);
+                }
+                ctx.strokeStyle = colorSet.stroke;
+                ctx.lineWidth = 2.5;
+                ctx.shadowColor = `${colorSet.stroke}40`;
+                ctx.shadowBlur = 6;
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+
+                // Mean marker — vertical dashed line
+                const meanPx = margin.left + ((curve.mean - plot.xMin) / (plot.xMax - plot.xMin)) * plotW;
+                const meanPy = margin.top + plotH * (1 - gaussPDF(curve.mean, curve.mean, curve.variance) / yMax);
+                ctx.strokeStyle = colorSet.stroke;
+                ctx.lineWidth = 1.5;
+                ctx.setLineDash([4, 3]);
+                ctx.beginPath();
+                ctx.moveTo(meanPx, meanPy);
+                ctx.lineTo(meanPx, margin.top + plotH);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                // Mean label
+                ctx.fillStyle = colorSet.stroke;
+                ctx.font = 'bold 9px Inter, sans-serif';
+                ctx.textAlign = 'center';
+                const meanLabel = `μ=${curve.mean.toFixed(1)}`;
+                const labelY = meanPy - 6;
+                ctx.fillText(meanLabel, meanPx, Math.max(margin.top + 10, labelY));
+            });
+
+            // X-axis tick labels
+            ctx.fillStyle = COLORS.muted;
+            ctx.font = '9px Inter, sans-serif';
+            ctx.textAlign = 'center';
+            const xTicks = 5;
+            for (let i = 0; i <= xTicks; i++) {
+                const xVal = plot.xMin + (plot.xMax - plot.xMin) * (i / xTicks);
+                const px = margin.left + (i / xTicks) * plotW;
+                ctx.fillText(xVal.toFixed(1), px, margin.top + plotH + 16);
+            }
+
+            // Feature name label (top-left)
+            ctx.fillStyle = primaryStr;
+            ctx.font = 'bold 11px Inter, sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText(plot.featureName, margin.left + 4, margin.top - 10);
+
+            // Separation score badge (top-right)
+            ctx.fillStyle = COLORS.textSoft;
+            ctx.font = '9px Inter, sans-serif';
+            ctx.textAlign = 'right';
+            ctx.fillText(`Separation: ${plot.separationScore.toFixed(2)}σ`, w - margin.right, margin.top - 10);
+
+            // Y-axis label
+            ctx.save();
+            ctx.translate(12, margin.top + plotH / 2);
+            ctx.rotate(-Math.PI / 2);
+            ctx.fillStyle = COLORS.muted;
+            ctx.font = '9px Inter, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('Density', 0, 0);
+            ctx.restore();
+        });
+    }, [vizData, COLORS, primaryStr, tName]);
+
+    useEffect(() => {
+        drawAll();
+        let timeoutId = null;
+        const handleResize = () => { if (timeoutId) clearTimeout(timeoutId); timeoutId = setTimeout(drawAll, 100); };
+        window.addEventListener('resize', handleResize);
+        return () => { window.removeEventListener('resize', handleResize); if (timeoutId) clearTimeout(timeoutId); };
+    }, [drawAll]);
+
+    // ── Clinical explanation based on real separation data ────────────
     const explanation = useMemo(() => {
-        const logSmooth = Math.log10(smoothing);
-        if (logSmooth <= -10) return `Low distribution score: The model isolates raw frequencies. This leads to rigid, acute warnings (high risk diagnoses) inside very narrow symptom clusters.`;
-        if (logSmooth <= -7) return `Balanced distribution score: The algorithm correctly harmonizes highly specific patient findings with expected statistical safeguard tolerances.`;
-        return `High plasticity margin: Rare symptom variance probabilities are flattened aggressively towards the baseline mean. The model behaves highly conservatively preventing false alarms but potentially missing acute outlier indicators.`;
-    }, [smoothing]);
+        if (!vizData) return '';
+        const topFeature = vizData.featurePlots[0];
+        if (!topFeature) return '';
+        const sep = topFeature.separationScore;
+        if (sep > 1.5) return `Strong class separation detected on ${topFeature.featureName} (${sep.toFixed(2)}σ apart). The Gaussian distributions show minimal overlap — the model can confidently distinguish between classes using this feature alone.`;
+        if (sep > 0.5) return `Moderate class separation on ${topFeature.featureName} (${sep.toFixed(2)}σ apart). The bell curves overlap partially — the model combines evidence from multiple features via Bayes' theorem for accurate classification.`;
+        return `The class distributions overlap heavily on ${topFeature.featureName} (${sep.toFixed(2)}σ apart). Naive Bayes compensates by combining weak signals from all features independently — the "naive" assumption of feature independence makes this tractable.`;
+    }, [vizData]);
 
-    if (!features || !features.list || features.list.length === 0) return null;
-
-    // A simple Bayesian combination naive approximation for UI
-    let aggregateLogOdds = 0;
-    features.list.forEach(f => {
-        let p = f.prob / 100; p = Math.max(0.01, Math.min(0.99, p));
-        aggregateLogOdds += Math.log(p / (1 - p));
-    });
-    const finalComb = 1 / (1 + Math.exp(-aggregateLogOdds));
-    const finalProb = Math.round(finalComb * 100);
+    // ── Waiting state ─────────────────────────────────────────────────
+    if (!vizData) {
+        return (
+            <div className={'flex flex-col items-center justify-center py-16 rounded-2xl ' + (isDarkMode ? 'text-slate-500' : 'text-slate-400')}>
+                <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+                    className="w-8 h-8 rounded-full border-[3px] border-t-transparent mb-4" style={{ borderColor: `${primaryStr}30`, borderTopColor: primaryStr }} />
+                <div className="text-sm font-medium">Waiting for Naive Bayes training results…</div>
+                <div className="text-xs mt-1 opacity-60">Distributions will appear after model trains</div>
+            </div>
+        );
+    }
 
     return (
         <div>
             <VizDescription isDarkMode={isDarkMode}>
-                Every clinical input independently (Naively) calculates its conditional probability on the <strong>{tName}</strong> outcome. The <strong>Clinical Distribution Score</strong> restricts sparse edge cases from skewing the aggregate posterior probability.
+                Gaussian Naive Bayes models each feature as a <strong>bell curve</strong> (normal distribution) per class.
+                Below are the <strong>top {vizData.featurePlots.length} most discriminative features</strong> showing how
+                the <span style={{ color: COLORS.green, fontWeight: 600 }}>safe</span> and{' '}
+                <span style={{ color: COLORS.red, fontWeight: 600 }}>{tName.toLowerCase()}</span> populations differ.
+                Less overlap = stronger signal for classification.
             </VizDescription>
 
             <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.4 }}
-                className="space-y-3"
+                className="grid grid-cols-1 sm:grid-cols-2 gap-3"
             >
-                {features.list.map((f, i) => {
-                    const isIncrease = f.direction === 'increase';
-                    const barColor = isIncrease ? COLORS.red : COLORS.green;
-                    const barGrad = isIncrease ? '#ef4444' : '#22c55e';
-                    return (
-                        <motion.div
-                            key={f.name}
-                            initial={{ opacity: 0, x: -10 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: i * 0.06, duration: 0.3 }}
-                            className={'rounded-xl p-3.5 transition-all duration-200 ' + (isDarkMode
-                                ? 'bg-white/[0.03] border border-white/[0.06] hover:border-white/10'
-                                : 'bg-indigo-50/30 border border-indigo-100 hover:shadow-sm')}
-                        >
-                            <div className="flex justify-between items-center mb-2">
-                                <span className={'text-[12px] font-semibold ' + (isDarkMode ? 'text-slate-200' : 'text-slate-700')}>Clinical Data: {f.formattedName} Profile</span>
-                                <span className={'text-[11px] font-mono font-bold tabular-nums'} style={{ color: barColor }}>P = %{f.prob}</span>
-                            </div>
-                            <div className={'h-2 rounded-full overflow-hidden ' + (isDarkMode ? 'bg-slate-800' : 'bg-slate-100')}>
-                                <motion.div
-                                    initial={{ width: 0 }}
-                                    animate={{ width: `${f.prob}%` }}
-                                    transition={{ duration: 0.8, delay: i * 0.08, ease: [0.16, 1, 0.3, 1] }}
-                                    className="h-full rounded-full"
-                                    style={{ background: `linear-gradient(90deg, ${barColor}, ${barGrad})`, boxShadow: `0 0 6px ${barColor}20` }}
-                                />
-                            </div>
-                            <div className={'text-[10px] mt-1.5 ' + (isDarkMode ? 'text-slate-500' : 'text-slate-400')}>{f.impact}</div>
-                        </motion.div>
-                    );
-                })}
+                {vizData.featurePlots.map((plot, i) => (
+                    <motion.div
+                        key={plot.featureIndex}
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: i * 0.08, duration: 0.35 }}
+                        className={'rounded-xl overflow-hidden transition-all duration-200 ' + (isDarkMode
+                            ? 'bg-white/[0.02] border border-white/[0.06] hover:border-white/10'
+                            : 'bg-white border border-slate-200 hover:shadow-md')}
+                    >
+                        <canvas
+                            ref={el => { canvasRefs.current[i] = el; }}
+                            style={{
+                                width: '100%',
+                                height: '180px',
+                                display: 'block',
+                                borderRadius: '12px',
+                            }}
+                        />
+                    </motion.div>
+                ))}
+            </motion.div>
 
-                {/* Final probability */}
-                <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3, duration: 0.3 }}
-                    className="rounded-xl p-4 mt-2"
-                    style={{
-                        backgroundColor: isDarkMode ? `${primaryStr}08` : `${primaryStr}06`,
-                        border: `1px solid ${isDarkMode ? `${primaryStr}20` : primaryStr}`,
-                    }}
-                >
-                    <div className="flex items-center gap-2">
-                        <TrendingUp className="w-4 h-4" style={{ color: primaryStr }} />
-                        <span className="text-[13px] font-bold" style={{ color: primaryStr }}>
-                            (Combined Bayesian Feature Integration) Aggregate Estimated Risk: {finalProb}% {tName}
+            <LegendRow isDarkMode={isDarkMode} primaryStr={primaryStr} items={[
+                { color: COLORS.green, label: `Not ${tName} (Class 0)` },
+                { color: COLORS.red, label: `${tName} (Class 1)` },
+                { render: <div className="w-4 h-0 border-t-2 border-dashed" style={{ borderColor: COLORS.muted }} />, label: 'Mean (μ)' },
+            ]} />
+
+            {/* Summary stats card */}
+            <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.35, duration: 0.3 }}
+                className="rounded-xl p-4 mt-3"
+                style={{
+                    backgroundColor: isDarkMode ? `${primaryStr}08` : `${primaryStr}06`,
+                    border: `1px solid ${isDarkMode ? `${primaryStr}20` : primaryStr}`,
+                }}
+            >
+                <div className="flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4" style={{ color: primaryStr }} />
+                    <span className="text-[13px] font-bold" style={{ color: primaryStr }}>
+                        Bayesian Feature Separation Analysis
+                    </span>
+                </div>
+                <div className={'text-[11px] mt-2 leading-relaxed ' + (isDarkMode ? 'text-slate-400' : 'text-slate-500')}>
+                    {vizData.featurePlots.map((p, i) => (
+                        <span key={i}>
+                            <strong>{p.featureName}</strong>: {p.separationScore.toFixed(2)}σ{i < vizData.featurePlots.length - 1 ? ' · ' : ''}
                         </span>
-                    </div>
-                    <div className={'text-[10px] mt-1.5 ' + (isDarkMode ? 'text-slate-500' : 'text-slate-400')}>
-                        Baseline Population Risk: {features.baseProb}% · {finalProb >= 60 ? 'High Risk Indicator / Active Tracking Advised' : finalProb >= 45 ? 'Borderline Symptomatology' : 'Low Risk / Routine Discharge Priority'}
-                    </div>
-                </motion.div>
+                    ))}
+                </div>
             </motion.div>
 
             <ClinicalBanner isDarkMode={isDarkMode} accentColor={secondaryStr}>{explanation}</ClinicalBanner>
@@ -1357,9 +1506,9 @@ const ModelVisualizer = React.memo(({ selectedModel, params, isDarkMode, dataset
             >
                 {(() => {
                     switch (selectedModel) {
-                        case 'knn': return <KNNViz params={params} isDarkMode={isDarkMode} datasetSchema={datasetSchema} targetColumn={targetColumn} primaryStr={primaryStr} secondaryStr={secondaryStr} dataset={dataset} trainedModelResult={trainedModelResult} />;
-                        case 'svm': return <SVMViz params={params} isDarkMode={isDarkMode} datasetSchema={datasetSchema} targetColumn={targetColumn} primaryStr={primaryStr} secondaryStr={secondaryStr} dataset={dataset} trainedModelResult={trainedModelResult} />;
-                        case 'lr': return <LRViz params={params} isDarkMode={isDarkMode} datasetSchema={datasetSchema} targetColumn={targetColumn} primaryStr={primaryStr} secondaryStr={secondaryStr} dataset={dataset} trainedModelResult={trainedModelResult} />;
+                        case 'knn': return <KNNViz params={params} isDarkMode={isDarkMode} datasetSchema={datasetSchema} targetColumn={targetColumn} primaryStr={primaryStr} secondaryStr={secondaryStr} dataset={dataset} />;
+                        case 'svm': return <SVMViz params={params} isDarkMode={isDarkMode} datasetSchema={datasetSchema} targetColumn={targetColumn} primaryStr={primaryStr} secondaryStr={secondaryStr} dataset={dataset} />;
+                        case 'lr': return <LRViz params={params} isDarkMode={isDarkMode} datasetSchema={datasetSchema} targetColumn={targetColumn} primaryStr={primaryStr} secondaryStr={secondaryStr} dataset={dataset} />;
                         case 'dt': return <DTViz params={params} isDarkMode={isDarkMode} datasetSchema={datasetSchema} targetColumn={targetColumn} primaryStr={primaryStr} secondaryStr={secondaryStr} dataset={dataset} />;
                         case 'rf': return <RFViz params={params} isDarkMode={isDarkMode} datasetSchema={datasetSchema} targetColumn={targetColumn} primaryStr={primaryStr} secondaryStr={secondaryStr} dataset={dataset} trainedModelResult={trainedModelResult} />;
                         case 'nb': return <NBViz params={params} isDarkMode={isDarkMode} datasetSchema={datasetSchema} targetColumn={targetColumn} primaryStr={primaryStr} secondaryStr={secondaryStr} dataset={dataset} trainedModelResult={trainedModelResult} />;

@@ -155,7 +155,7 @@ const ModelSelection = ({ isDarkMode, onNext, onPrev, dataset, datasetSchema, ta
         if (selectedModel === 'dt') return `Depth=${p.maxDepth}`;
         if (selectedModel === 'rf') return `Trees=${p.trees}, Depth=${p.maxDepth}`;
         if (selectedModel === 'lr') return `Iter=${p.iterations}`;
-        if (selectedModel === 'nb') return `Smooth=${p.smoothing}`;
+        if (selectedModel === 'nb') return `Smooth=${p.smoothing >= 0.01 ? p.smoothing.toFixed(2) : p.smoothing.toExponential(0)}`;
         return '';
     };
 
@@ -322,9 +322,9 @@ const ModelSelection = ({ isDarkMode, onNext, onPrev, dataset, datasetSchema, ta
                                         </div>
                                     )}
                                     {selectedModel === 'nb' && (
-                                        <ParamSlider label="Clinical Distribution Score" tooltip="Prevents sparse anomalies from overly influencing." value={Math.log10(params.nb.smoothing)} min={-12} max={-5} step={1}
-                                            onChange={(e) => setParams({ ...params, nb: { ...params.nb, smoothing: Math.pow(10, Number(e.target.value)) } })} lowLabel="Low (Strict)" highLabel="High (Flexible)"
-                                            displayValue={`${(Math.abs(-13 - Math.log10(params.nb.smoothing)) * 10).toFixed(0)} Points`} isDarkMode={isDarkMode} primaryStr={primaryStr} />
+                                        <ParamSlider label="Variance Smoothing" tooltip="Controls how much extra variance is added to each feature's distribution. Higher values flatten the bell curves and make the model more conservative (less overfitting)." value={Math.log10(params.nb.smoothing)} min={-9} max={0} step={1}
+                                            onChange={(e) => setParams({ ...params, nb: { ...params.nb, smoothing: Math.pow(10, Number(e.target.value)) } })} lowLabel="1e-9 (Sharp)" highLabel="1.0 (Smooth)"
+                                            displayValue={params.nb.smoothing >= 0.01 ? params.nb.smoothing.toFixed(2) : params.nb.smoothing.toExponential(0)} isDarkMode={isDarkMode} primaryStr={primaryStr} />
                                     )}
                                 </div>
 
