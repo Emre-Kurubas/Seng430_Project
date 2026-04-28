@@ -119,10 +119,21 @@ const StepTour = ({ stepNumber, steps, isDarkMode }) => {
     const [targetRect, setTargetRect] = useState(null);
     const [ready, setReady] = useState(false);
 
+    // Lock scrolling on the main content area while tour is active
+    useEffect(() => {
+        if (!visible) return;
+        const scrollContainer = document.querySelector('.app-layout');
+        if (scrollContainer) {
+            const prevOverflow = scrollContainer.style.overflow;
+            scrollContainer.style.overflow = 'hidden';
+            return () => { scrollContainer.style.overflow = prevOverflow; };
+        }
+    }, [visible]);
+
     useEffect(() => {
         const seen = localStorage.getItem(storageKey);
         if (!seen && window.innerWidth >= 1024) {
-            const t = setTimeout(() => setVisible(true), 2000);
+            const t = setTimeout(() => setVisible(true), 400);
             return () => clearTimeout(t);
         }
     }, [storageKey]);
@@ -151,10 +162,21 @@ const StepTour = ({ stepNumber, steps, isDarkMode }) => {
         }
 
         setReady(false);
+        let cancelled = false;
 
-        const scrollAndMeasure = () => {
+        // Poll for the element in case it hasn't rendered yet
+        const findAndMeasure = (attempts = 0) => {
+            if (cancelled) return;
             const el = document.getElementById(step.targetId);
-            if (!el) { setTargetRect(null); setReady(true); return; }
+            if (!el) {
+                if (attempts < 20) {
+                    setTimeout(() => findAndMeasure(attempts + 1), 50);
+                } else {
+                    setTargetRect(null);
+                    setReady(true);
+                }
+                return;
+            }
 
             // Find the scrollable container (.app-layout)
             const scrollContainer = document.querySelector('.app-layout') || document.documentElement;
@@ -166,11 +188,13 @@ const StepTour = ({ stepNumber, steps, isDarkMode }) => {
             const isBelow = elRect.bottom > containerRect.bottom - 40;
 
             if (isAbove || isBelow) {
-                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                el.scrollIntoView({ behavior: 'instant', block: 'center' });
             }
 
-            // Wait for scroll to settle, then measure in viewport coordinates
-            setTimeout(() => {
+            // Measure immediately (scroll is instant now, no need to wait)
+            if (cancelled) return;
+            requestAnimationFrame(() => {
+                if (cancelled) return;
                 const rect = el.getBoundingClientRect();
                 setTargetRect({
                     top: rect.top, left: rect.left,
@@ -178,11 +202,12 @@ const StepTour = ({ stepNumber, steps, isDarkMode }) => {
                     bottom: rect.bottom, right: rect.right,
                 });
                 setReady(true);
-            }, 500);
+            });
         };
 
-        const t = setTimeout(scrollAndMeasure, 100);
-        return () => clearTimeout(t);
+        // Start immediately — no extra delay
+        findAndMeasure();
+        return () => { cancelled = true; };
     }, [idx, visible, steps]);
 
     // Resize handler

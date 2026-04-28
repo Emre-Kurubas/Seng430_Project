@@ -386,11 +386,22 @@ const OnboardingTour = ({ isDarkMode }) => {
     const [targetRect, setTargetRect] = useState(null);
     const [ready, setReady] = useState(false);
 
+    // Lock scrolling on the main content area while tour is active
+    useEffect(() => {
+        if (!visible) return;
+        const scrollContainer = document.querySelector('.app-layout');
+        if (scrollContainer) {
+            const prevOverflow = scrollContainer.style.overflow;
+            scrollContainer.style.overflow = 'hidden';
+            return () => { scrollContainer.style.overflow = prevOverflow; };
+        }
+    }, [visible]);
+
     useEffect(() => {
         const seen = localStorage.getItem(TOUR_KEY);
         const isMobile = window.innerWidth < 1024;
         if (!seen && !isMobile) {
-            const t = setTimeout(() => setVisible(true), 1400);
+            const t = setTimeout(() => setVisible(true), 400);
             return () => clearTimeout(t);
         }
     }, []);
