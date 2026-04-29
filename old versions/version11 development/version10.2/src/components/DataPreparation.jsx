@@ -1,825 +1,652 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
-// eslint-disable-next-line no-unused-vars
-import { motion, AnimatePresence, useMotionValue, useTransform, useSpring } from 'framer-motion';
-import { ArrowLeft, ArrowRight, Sliders, CheckCircle2, AlertCircle, BarChart3, Database, Split, Scale, Users, Sparkles, Zap, ChevronDown, Layers, Shield, FlaskConical, ArrowRightLeft } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+    ArrowRight, ArrowUpRight, ArrowDownRight,
+    Database, Scale, Users, CheckCircle2, ChevronDown,
+    Zap, Settings2, ArrowRightLeft
+} from 'lucide-react';
 import { FloatingParticles, containerAnim, itemAnim } from './StepShared';
-import Tooltip from './Tooltip';
 
 /* ═══════════════════════════════════════════════════════════════
-   Animated Count-Up
+   Custom Hooks & Utilities
    ═══════════════════════════════════════════════════════════════ */
-const AnimatedNumber = ({ value, duration = 1.2 }) => {
-    const [display, setDisplay] = useState(0);
-    const ref = useRef(null);
+const useCountUp = (target, duration = 1000, delay = 0) => {
+    const [count, setCount] = useState(0);
     useEffect(() => {
-        const target = typeof value === 'number' ? value : parseInt(value) || 0;
-        const startTime = performance.now();
-        const animate = (now) => {
-            const elapsed = now - startTime;
-            const progress = Math.min(elapsed / (duration * 1000), 1);
-            const eased = 1 - Math.pow(1 - progress, 4);
-            setDisplay(Math.round(eased * target));
-            if (progress < 1) ref.current = requestAnimationFrame(animate);
-        };
-        ref.current = requestAnimationFrame(animate);
-        return () => cancelAnimationFrame(ref.current);
-    }, [value, duration]);
-    return <>{display.toLocaleString()}</>;
+        let start = null; let raf;
+        const timeout = setTimeout(() => {
+            const step = (ts) => {
+                if (!start) start = ts;
+                const progress = Math.min((ts - start) / duration, 1);
+                setCount(Math.round((1 - Math.pow(1 - progress, 3)) * target));
+                if (progress < 1) raf = requestAnimationFrame(step);
+            };
+            raf = requestAnimationFrame(step);
+        }, delay);
+        return () => { clearTimeout(timeout); cancelAnimationFrame(raf); };
+    }, [target, duration, delay]);
+    return count;
 };
 
-
-
 /* ═══════════════════════════════════════════════════════════════
-   Animated Ring Donut — Train/Test Split
+   UI Components
    ═══════════════════════════════════════════════════════════════ */
-const SplitDonut = React.memo(({ trainPct, isDarkMode, primaryStr, secondaryStr }) => {
-    const radius = 50;
-    const strokeWidth = 10;
-    const circumference = 2 * Math.PI * radius;
-    const trainDash = (trainPct / 100) * circumference;
-    const testDash = circumference - trainDash;
+const MetricSubCard = ({ title, options, selectedIdx, onSelect, subtext, trend, icon: Icon, color, isDarkMode }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const dropdownRef = useRef(null);
 
-    return (
-        <div className="relative flex items-center justify-center" style={{ width: 130, height: 130 }}>
-            <svg viewBox="0 0 130 130" className="w-full h-full -rotate-90">
-                {/* Test arc */}
-                <motion.circle
-                    cx="65" cy="65" r={radius}
-                    fill="none"
-                    stroke={isDarkMode ? '#334155' : '#e2e8f0'}
-                    strokeWidth={strokeWidth}
-                    strokeLinecap="round"
-                />
-                {/* Train arc */}
-                <motion.circle
-                    cx="65" cy="65" r={radius}
-                    fill="none"
-                    stroke={primaryStr}
-                    strokeWidth={strokeWidth}
-                    strokeLinecap="round"
-                    strokeDasharray={`${trainDash} ${circumference}`}
-                    initial={{ strokeDasharray: `0 ${circumference}` }}
-                    animate={{ strokeDasharray: `${trainDash} ${circumference}` }}
-                    transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
-                    style={{ filter: `drop-shadow(0 0 6px ${primaryStr}40)` }}
-                />
-                {/* Test highlight arc */}
-                <motion.circle
-                    cx="65" cy="65" r={radius}
-                    fill="none"
-                    stroke={secondaryStr}
-                    strokeWidth={strokeWidth}
-                    strokeLinecap="round"
-                    strokeDasharray={`${testDash} ${circumference}`}
-                    strokeDashoffset={-trainDash}
-                    initial={{ strokeDasharray: `0 ${circumference}` }}
-                    animate={{ strokeDasharray: `${testDash} ${circumference}` }}
-                    transition={{ duration: 1, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-                    style={{ filter: `drop-shadow(0 0 6px ${secondaryStr}40)` }}
-                />
-            </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className={'text-2xl font-bold tabular-nums ' + (isDarkMode ? 'text-white' : 'text-slate-900')}>{trainPct}%</span>
-                <span className={'text-[8px] uppercase tracking-widest font-bold ' + (isDarkMode ? 'text-slate-500' : 'text-slate-400')}>Train</span>
-            </div>
-        </div>
-    );
-});
-
-/* ═══════════════════════════════════════════════════════════════
-   iOS Controls
-   ═══════════════════════════════════════════════════════════════ */
-function SegmentedControl({ options, selected, onChange }) {
-  return (
-    <div style={{ display: 'flex', background: 'var(--bg-card-secondary)', padding: 4, borderRadius: 12, marginTop: 8 }}>
-      {options.map(opt => (
-        <div 
-          key={opt.value} 
-          onClick={() => onChange(opt.value)} 
-          style={{ 
-            flex: 1, textAlign: 'center', padding: '8px 4px', borderRadius: 10,
-            background: selected === opt.value ? 'var(--bg-card)' : 'transparent',
-            boxShadow: selected === opt.value ? '0 2px 8px rgba(0,0,0,0.06)' : 'none',
-            fontWeight: selected === opt.value ? 600 : 500,
-            color: selected === opt.value ? 'var(--text-main)' : 'var(--text-sec)',
-            fontSize: '0.85rem', cursor: 'pointer', transition: 'all 0.3s ease' 
-          }}
-        >
-          {opt.label}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function IosSwitch({ checked, onChange, disabled }) {
-  return (
-    <div 
-      onClick={() => !disabled && onChange(!checked)} 
-      style={{ 
-        width: 50, height: 30, borderRadius: 15, background: checked ? 'var(--ios-green)' : 'var(--border)', 
-        position: 'relative', cursor: disabled ? 'not-allowed' : 'pointer', transition: 'background 0.3s',
-        opacity: disabled ? 0.6 : 1
-      }}
-    >
-      <motion.div 
-        style={{ 
-          width: 26, height: 26, borderRadius: 13, background: 'white', 
-          position: 'absolute', top: 2, left: 2, boxShadow: '0 2px 5px rgba(0,0,0,0.2)' 
-        }} 
-        animate={{ x: checked ? 20 : 0 }} 
-        transition={{ type: 'spring', stiffness: 500, damping: 30 }} 
-      />
-    </div>
-  );
-}
-
-/* ═══════════════════════════════════════════════════════════════
-   Animated Before/After Bar (enhanced)
-   ═══════════════════════════════════════════════════════════════ */
-const AnimatedBar = ({ label, value, displayValue, colorCode, delay = 0, isDarkMode }) => (
-    <div className="flex items-center text-xs gap-3">
-        <div className={`w-14 text-right font-medium shrink-0 ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>{label}</div>
-        <div className={`flex-grow h-3 rounded-full overflow-hidden ${isDarkMode ? 'bg-slate-800' : 'bg-slate-100'}`}>
-            <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: `${Math.max(value, 2)}%` }}
-                transition={{ duration: 1, ease: [0.16, 1, 0.3, 1], delay }}
-                className="h-full rounded-full"
-                style={{ backgroundColor: colorCode, boxShadow: `0 0 8px ${colorCode}30` }}
-            />
-        </div>
-        <div className={`w-12 text-right font-mono font-bold tabular-nums ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>{displayValue}</div>
-    </div>
-);
-
-/* ═══════════════════════════════════════════════════════════════
-   Normalisation Before/After Visualization
-   ═══════════════════════════════════════════════════════════════ */
-const NormalisationViz = React.memo(({ normMethod, isDarkMode, dataset, datasetSchema, primaryStr, secondaryStr }) => {
-    const targetFeature = datasetSchema?.find(c => c.role === 'Number (measurement)')?.name || 'Example Feature';
-
-    let nMin = 14, nMax = 80, nAvg = 38;
-    if (dataset && dataset.length > 0 && targetFeature !== 'Example Feature') {
-        const vals = dataset.map(row => Number(row[targetFeature])).filter(n => !isNaN(n));
-        if (vals.length > 0) {
-            let min = Infinity, max = -Infinity, sum = 0;
-            for (let i = 0; i < vals.length; i++) {
-                if (vals[i] < min) min = vals[i];
-                if (vals[i] > max) max = vals[i];
-                sum += vals[i];
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setIsOpen(false);
             }
-            nMin = min;
-            nMax = max;
-            nAvg = sum / vals.length;
-        }
-    }
-
-    const raw = { min: Number(nMin.toFixed(1)), avg: Number(nAvg.toFixed(1)), max: Number(nMax.toFixed(1)) };
-    const stdDev = nMax === nMin ? 1 : (nMax - nMin) / 4;
-
-    let normed;
-    if (normMethod === 'min-max') {
-        normed = { min: { val: 0, pct: 2 }, avg: { val: (raw.avg - raw.min) / (raw.max - raw.min || 1), pct: ((raw.avg - raw.min) / (raw.max - raw.min || 1)) * 100 }, max: { val: 1.00, pct: 100 } };
-    } else if (normMethod === 'z-score') {
-        normed = {
-            min: { val: (raw.min - raw.avg) / stdDev, pct: 3 },
-            avg: { val: 0.00, pct: 50 },
-            max: { val: (raw.max - raw.avg) / stdDev, pct: 97 }
         };
-    } else {
-        normed = { min: { val: raw.min, pct: 2 }, avg: { val: raw.avg, pct: 50 }, max: { val: raw.max, pct: 100 } };
-    }
-
-    const methodLabel = normMethod === 'min-max' ? '0–1' : normMethod === 'z-score' ? 'z-score' : 'raw';
+        if (isOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [isOpen]);
 
     return (
-        <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className={'rounded-2xl p-5 ' + (isDarkMode ? 'bg-white/[0.02] border border-white/[0.06]' : 'bg-white border border-slate-200 shadow-sm')}
-        >
-            <div className="flex items-center justify-between mb-5">
-                <div className="flex items-center gap-2">
-                    <Scale className="w-4 h-4" style={{ color: primaryStr }} />
-                    <span className={'text-xs font-bold uppercase tracking-wider ' + (isDarkMode ? 'text-slate-400' : 'text-slate-500')}>
-                        Normalisation — {targetFeature}
-                    </span>
-                </div>
-                <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold" style={{ backgroundColor: `${primaryStr}15`, color: primaryStr }}>{methodLabel}</span>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Before */}
-                <div className="space-y-3">
-                    <div className={'text-center text-[10px] font-bold uppercase tracking-widest mb-3 ' + (isDarkMode ? 'text-slate-500' : 'text-slate-400')}>Before (raw)</div>
-                    <AnimatedBar label="Min" value={2} displayValue={`${raw.min}`} colorCode={isDarkMode ? '#64748b' : '#94a3b8'} delay={0} isDarkMode={isDarkMode} />
-                    <AnimatedBar label="Avg" value={50} displayValue={`${raw.avg}`} colorCode={primaryStr} delay={0.1} isDarkMode={isDarkMode} />
-                    <AnimatedBar label="Max" value={100} displayValue={`${raw.max}`} colorCode={secondaryStr} delay={0.2} isDarkMode={isDarkMode} />
-                </div>
-
-                {/* After */}
-                <div className="space-y-3 relative">
-                    <div className={'absolute -left-3 top-1/2 -translate-y-1/2 hidden md:block ' + (isDarkMode ? 'text-slate-700' : 'text-slate-300')}>
-                        <ArrowRightLeft className="w-3.5 h-3.5" />
+        <div ref={dropdownRef} className={`p-4 lg:p-5 rounded-[24px] transition-all duration-500 hover:-translate-y-1 relative group ${isDarkMode ? 'bg-white/[0.015] hover:bg-white/[0.035] border border-white/[0.04]' : 'bg-slate-50/50 hover:bg-white border border-slate-100 hover:shadow-xl hover:shadow-slate-200/50'} ${isOpen ? 'z-50' : 'z-10'}`}>
+            <div className="flex justify-between items-start mb-4">
+                <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-[12px] flex items-center justify-center transition-colors ${isDarkMode ? 'bg-white/[0.03]' : 'bg-white shadow-sm border border-slate-100'}`}>
+                        <Icon className="w-4 h-4" style={{ color }} />
                     </div>
-                    <div className={'text-center text-[10px] font-bold uppercase tracking-widest mb-3 ' + (isDarkMode ? 'text-slate-500' : 'text-slate-400')}>After ({methodLabel})</div>
-                    <AnimatedBar label="Min" value={normed.min.pct} displayValue={typeof normed.min.val === 'number' ? normed.min.val.toFixed(2) : normed.min.val} colorCode={isDarkMode ? '#64748b' : '#94a3b8'} delay={0.4} isDarkMode={isDarkMode} />
-                    <AnimatedBar label="Avg" value={normed.avg.pct} displayValue={typeof normed.avg.val === 'number' ? normed.avg.val.toFixed(2) : normed.avg.val} colorCode={primaryStr} delay={0.5} isDarkMode={isDarkMode} />
-                    <AnimatedBar label="Max" value={normed.max.pct} displayValue={typeof normed.max.val === 'number' ? normed.max.val.toFixed(2) : normed.max.val} colorCode={secondaryStr} delay={0.6} isDarkMode={isDarkMode} />
+                    <h4 className={`text-[11px] font-bold uppercase tracking-widest ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>{title}</h4>
                 </div>
             </div>
-        </motion.div>
+
+            <div className={`text-[9px] font-semibold uppercase tracking-wider mb-2 opacity-50 ${isDarkMode ? 'text-slate-400' : 'text-slate-400'}`}>Strategy Mode</div>
+
+            <div className="relative mb-3">
+                <div onClick={() => setIsOpen(!isOpen)}
+                    className="flex justify-between items-center w-full py-1 cursor-pointer group/select">
+                    <span className={`text-[17px] sm:text-xl font-bold tracking-tight select-none ${isDarkMode ? 'text-slate-50' : 'text-slate-800'}`}>
+                        {options[selectedIdx]}
+                    </span>
+                    <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'} ${isOpen ? 'rotate-180' : 'opacity-40 group-hover/select:opacity-100'}`} />
+                </div>
+                <div className="w-full h-[1px] bg-slate-200 dark:bg-white/10 opacity-50 mb-1" />
+
+                <AnimatePresence>
+                    {isOpen && (
+                        <motion.div initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} transition={{ duration: 0.15 }}
+                            className={`absolute top-full left-0 w-[110%] -ml-[5%] mt-2 rounded-[16px] overflow-hidden shadow-2xl border ${isDarkMode ? 'bg-[#27272a] border-white/[0.04] shadow-black/60' : 'bg-white border-slate-200 shadow-slate-200/50'}`}>
+                            {options.map((opt, i) => (
+                                <div key={opt} onClick={() => { onSelect(i); setIsOpen(false); }}
+                                    className={`px-4 py-3 text-sm font-bold cursor-pointer transition-colors ${i === selectedIdx ? (isDarkMode ? 'bg-indigo-500/20 text-indigo-300' : 'bg-indigo-50 text-indigo-600') : (isDarkMode ? 'hover:bg-white/5 text-slate-300' : 'hover:bg-slate-50 text-slate-600')}`}>
+                                    {opt}
+                                </div>
+                            ))}
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            </div>
+
+            <div className="flex items-center gap-1.5 text-[10px] font-bold mt-4" style={{ color: trend > 0 ? '#10b981' : '#f43f5e' }}>
+                <div className={`flex shrink-0 items-center justify-center w-4 h-4 rounded-full ${trend > 0 ? 'bg-emerald-500/10' : 'bg-rose-500/10'}`}>
+                    {trend > 0 ? <ArrowUpRight className="w-2.5 h-2.5" /> : <ArrowDownRight className="w-2.5 h-2.5" />}
+                </div>
+                <span className="opacity-90 leading-tight">{subtext}</span>
+            </div>
+        </div>
     );
-});
+};
 
 /* ═══════════════════════════════════════════════════════════════
-   Class Balance Before/After Visualization
+   Sankey / Funnel Data Split
    ═══════════════════════════════════════════════════════════════ */
-const ClassBalanceViz = React.memo(({ imbalanceMethod, isDarkMode, dataset, targetColumn, primaryStr, secondaryStr }) => {
-    let beforeMajority = 68;
-    let beforeMinority = 32;
-    let clsNames = ['Majority Class', 'Minority Class'];
+const DataAllocationChart = ({ splitRatio, trainCount, testCount, totalCount, isDarkMode }) => {
+    const cp = 50;
+    const testRatio = 100 - splitRatio;
 
-    if (dataset && dataset.length > 0 && targetColumn) {
-        const counts = {};
-        dataset.forEach(r => {
-            const v = r[targetColumn];
-            if (v !== undefined && v !== null && v !== '') {
-                counts[v] = (counts[v] || 0) + 1;
+    // Y positions
+    const yTotal = 50;
+    const hTotal = 30; // base thickness
+
+    const hTrain = (splitRatio / 100) * 80;
+    const yTrain = 15;
+
+    const hTest = (testRatio / 100) * 80;
+    const yTest = 85 - hTest;
+
+    const pathTrain = `M 0,${yTotal - hTotal / 2} C ${cp},${yTotal - hTotal / 2} ${100 - cp},${yTrain} 100,${yTrain} L 100,${yTrain + hTrain} C ${100 - cp},${yTrain + hTrain} ${cp},${yTotal + hTotal / 2 - (hTotal * (testRatio / 100))} 0,${yTotal + hTotal / 2 - (hTotal * (testRatio / 100))} Z`;
+    const pathTest = `M 0,${yTotal + hTotal / 2 - (hTotal * (testRatio / 100))} C ${cp},${yTotal + hTotal / 2 - (hTotal * (testRatio / 100))} ${100 - cp},${yTest} 100,${yTest} L 100,${yTest + hTest} C ${100 - cp},${yTest + hTest} ${cp},${yTotal + hTotal / 2} 0,${yTotal + hTotal / 2} Z`;
+
+    return (
+        <div className="relative w-full h-[220px] flex items-center pr-32 mt-2 mb-2">
+
+            {/* Left Box (Glassmorphic Total) */}
+            <div className={`w-28 shrink-0 z-20 p-4 rounded-[20px] flex flex-col items-center justify-center text-center backdrop-blur-xl border ${isDarkMode ? 'bg-white/[0.04] border-white/[0.08] shadow-2xl shadow-black/40' : 'bg-white/80 border-slate-200/50 shadow-xl shadow-slate-200/40'}`}>
+                <div className={`text-[10px] font-bold uppercase tracking-wider mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Total</div>
+                <div className={`text-2xl font-black ${isDarkMode ? 'text-slate-50' : 'text-slate-800'}`}>{totalCount}</div>
+            </div>
+
+            {/* SVG Sankey container */}
+            <svg viewBox="0 0 100 100" className="flex-1 h-full overflow-visible z-10 -ml-1" preserveAspectRatio="none">
+                <defs>
+                    <linearGradient id="fadeIndigo" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.1" />
+                        <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0.8" />
+                    </linearGradient>
+                    <linearGradient id="fadeRose" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stopColor="#f43f5e" stopOpacity="0.1" />
+                        <stop offset="100%" stopColor="#f43f5e" stopOpacity="0.8" />
+                    </linearGradient>
+                </defs>
+                <path d={pathTrain} fill="url(#fadeIndigo)" className="transition-all duration-500 ease-out" />
+                <path d={pathTest} fill="url(#fadeRose)" className="transition-all duration-500 ease-out" />
+            </svg>
+
+            {/* Right Blocks */}
+            <div className="absolute right-0 top-6 w-32 space-y-1 transition-all duration-500">
+                <div className="flex items-center gap-2 mb-1.5 opacity-80">
+                    <div className="w-2 h-2 rounded-full bg-[#8b5cf6] shadow-[0_0_8px_rgba(139,92,246,0.5)]" />
+                    <span className={`text-[10px] font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>Training Set</span>
+                </div>
+                <div className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>{trainCount} <span className="text-[11px] font-semibold opacity-50 ml-1">({splitRatio}%)</span></div>
+            </div>
+
+            <div className="absolute right-0 bottom-6 w-32 space-y-1 transition-all duration-500">
+                <div className="flex items-center gap-2 mb-1.5 opacity-80">
+                    <div className="w-2 h-2 rounded-full bg-[#f43f5e] shadow-[0_0_8px_rgba(244,63,94,0.5)]" />
+                    <span className={`text-[10px] font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>Test Set</span>
+                </div>
+                <div className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>{testCount} <span className="text-[11px] font-semibold opacity-50 ml-1">({testRatio}%)</span></div>
+            </div>
+        </div>
+    );
+};
+
+/* ═══════════════════════════════════════════════════════════════
+   Transformation Data Grid (3-Column)
+   ═══════════════════════════════════════════════════════════════ */
+const UnifiedTransformationChart = ({ isDarkMode, isApplied, normMethod, smoteMethod, dataset, datasetSchema, targetColumn }) => {
+    // 1. Determine Class Imbalance Percentages
+    const classStats = useMemo(() => {
+        if (!dataset) return null;
+        const tCol = targetColumn || datasetSchema?.find(s => s.role === 'Target')?.name;
+        if (!tCol) return null;
+
+        let counts = {};
+        let total = 0;
+        dataset.forEach(row => {
+            const val = row[tCol];
+            if (val !== undefined && val !== null) {
+                counts[val] = (counts[val] || 0) + 1;
+                total++;
             }
         });
-        const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
-        if (entries.length >= 2) {
-            const total = entries.reduce((acc, curr) => acc + curr[1], 0);
-            beforeMajority = Math.round((entries[0][1] / total) * 100);
-            beforeMinority = Math.round((entries[1][1] / total) * 100);
-            clsNames = [entries[0][0], entries[1][0]];
+
+        let readmittedCount = 0;
+        let notReadmittedCount = 0;
+
+        const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+        if (sorted.length >= 2) {
+            if (counts['1'] !== undefined && counts['0'] !== undefined) {
+                readmittedCount = counts['1'];
+                notReadmittedCount = counts['0'];
+            } else {
+                notReadmittedCount = sorted[0][1];
+                readmittedCount = sorted[1][1];
+            }
+        } else {
+            return null;
+        }
+
+        const rawReadmitPct = (readmittedCount / total) * 100;
+        const rawNotReadmitPct = (notReadmittedCount / total) * 100;
+
+        return { rawReadmitPct, rawNotReadmitPct };
+    }, [dataset, datasetSchema, targetColumn]);
+
+    // 2. Determine Continuous Stats
+    const featStats = useMemo(() => {
+        if (!dataset || !datasetSchema) return null;
+        const numericCol = datasetSchema.find(s => s.role === 'Number (measurement)' || s.type === 'number');
+        if (!numericCol) return null;
+
+        const feature = String(numericCol.name).trim();
+
+        let min = Infinity, max = -Infinity, sum = 0, count = 0;
+        dataset.forEach(row => {
+            let val = Number(row[feature]);
+            if (!isNaN(val)) {
+                if (val < min) min = val;
+                if (val > max) max = val;
+                sum += val; count++;
+            }
+        });
+
+        if (count === 0 || max <= min) return null;
+        const avg = sum / count;
+        const stdDev = (max - min) / 4 || 1;
+
+        return { min, avg, max, stdDev };
+    }, [dataset, datasetSchema]);
+
+    const fmtNorm = (v) => Math.abs(v) > 1000 ? (v / 1000).toFixed(1) + 'k' : v.toFixed(2);
+    const fmtPct = (v) => v.toFixed(1) + '%';
+
+    let rMin = '-', rAvg = '-', rMax = '-', rReadmit = '-', rNotReadmit = '-';
+    let aMin = '-', aAvg = '-', aMax = '-', aReadmit = '-', aNotReadmit = '-';
+    let wRMin = 0, wRAvg = 0, wRMax = 0, wAMin = 0, wAAvg = 0, wAMax = 0;
+
+    // Default percentages for classes
+    let lPctR = 0, rPctR = 0, lPctNR = 0, rPctNR = 0;
+
+    if (featStats) {
+        rMin = fmtNorm(featStats.min);
+        rAvg = fmtNorm(featStats.avg);
+        rMax = fmtNorm(featStats.max);
+
+        // Max range for scale tracking (Before)
+        const maxRScale = Math.max(Math.abs(featStats.min), Math.abs(featStats.max));
+        wRMin = Math.abs(featStats.min) / (maxRScale || 1) * 100;
+        wRAvg = Math.abs(featStats.avg) / (maxRScale || 1) * 100;
+        wRMax = Math.abs(featStats.max) / (maxRScale || 1) * 100;
+
+        if (!isApplied || normMethod === 'None') {
+            aMin = rMin; aAvg = rAvg; aMax = rMax;
+            wAMin = wRMin; wAAvg = wRAvg; wAMax = wRMax;
+        } else if (normMethod === 'Min-Max') {
+            aMin = '0.00'; aMax = '1.00';
+            const avgVal = (featStats.avg - featStats.min) / (featStats.max - featStats.min);
+            aAvg = avgVal.toFixed(2);
+            wAMin = 0; wAMax = 100; wAAvg = avgVal * 100;
+        } else if (normMethod === 'Z-Score') {
+            const minZ = (featStats.min - featStats.avg) / featStats.stdDev;
+            const maxZ = (featStats.max - featStats.avg) / featStats.stdDev;
+
+            aMin = minZ.toFixed(2);
+            aAvg = '0.00';
+            aMax = maxZ.toFixed(2);
+
+            const maxZScale = Math.max(Math.abs(minZ), Math.abs(maxZ));
+            wAMin = Math.abs(minZ) / (maxZScale || 1) * 100;
+            wAAvg = 0;
+            wAMax = Math.abs(maxZ) / (maxZScale || 1) * 100;
         }
     }
 
-    let afterMajority, afterMinority, afterLabel;
-    if (imbalanceMethod === 'smote') {
-        afterMajority = 50;
-        afterMinority = 50;
-        afterLabel = 'AFTER SMOTE';
-    } else {
-        afterMajority = beforeMajority;
-        afterMinority = beforeMinority;
-        afterLabel = 'NO CHANGE';
+    if (classStats) {
+        rReadmit = fmtPct(classStats.rawReadmitPct);
+        rNotReadmit = fmtPct(classStats.rawNotReadmitPct);
+        lPctR = classStats.rawReadmitPct;
+        lPctNR = classStats.rawNotReadmitPct;
+
+        if (!isApplied || smoteMethod === 'None') {
+            aReadmit = rReadmit;
+            aNotReadmit = rNotReadmit;
+            rPctR = lPctR;
+            rPctNR = lPctNR;
+        } else if (smoteMethod === 'SMOTE Oversampling') {
+            aReadmit = '50.0%';
+            aNotReadmit = '50.0%';
+            rPctR = 50;
+            rPctNR = 50;
+        }
     }
 
-    // Donut helper
-    const MiniDonut = ({ majority, minority, label, delay = 0 }) => {
-        const r = 36;
-        const sw = 8;
-        const c = 2 * Math.PI * r;
-        const majDash = (majority / 100) * c;
-        const minDash = (minority / 100) * c;
+    const PyramidRow = ({ label, lVal, rVal, lW, rW, isPctBox = false }) => {
+        // Enforce a minimum 1% width so there is a tiny tick 
+        const leftWidth = Math.min(Math.max(lW, 1), 100);
+        const rightWidth = Math.min(Math.max(rW, 1), 100);
+
+        const rBg = isApplied ? (isPctBox ? 'linear-gradient(to right, #34d399, #10b981)' : 'linear-gradient(to right, #34d399, #10b981)') : 'linear-gradient(to right, #94a3b8, #64748b)';
 
         return (
-            <div className="flex flex-col items-center gap-3">
-                <div className="relative" style={{ width: 90, height: 90 }}>
-                    <svg viewBox="0 0 90 90" className="w-full h-full -rotate-90">
-                        <circle cx="45" cy="45" r={r} fill="none" stroke={isDarkMode ? '#1e293b' : '#f1f5f9'} strokeWidth={sw} />
-                        <motion.circle
-                            cx="45" cy="45" r={r} fill="none"
-                            stroke={secondaryStr}
-                            strokeWidth={sw}
-                            strokeLinecap="round"
-                            strokeDasharray={`${majDash} ${c}`}
-                            initial={{ strokeDasharray: `0 ${c}` }}
-                            animate={{ strokeDasharray: `${majDash} ${c}` }}
-                            transition={{ duration: 1, delay: delay, ease: [0.16, 1, 0.3, 1] }}
-                        />
-                        <motion.circle
-                            cx="45" cy="45" r={r} fill="none"
-                            stroke={primaryStr}
-                            strokeWidth={sw}
-                            strokeLinecap="round"
-                            strokeDasharray={`${minDash} ${c}`}
-                            strokeDashoffset={-majDash}
-                            initial={{ strokeDasharray: `0 ${c}` }}
-                            animate={{ strokeDasharray: `${minDash} ${c}` }}
-                            transition={{ duration: 1, delay: delay + 0.15, ease: [0.16, 1, 0.3, 1] }}
-                        />
-                    </svg>
-                    <div className="absolute inset-0 flex items-center justify-center">
-                        <span className={'text-[10px] font-bold uppercase tracking-wider ' + (isDarkMode ? 'text-slate-500' : 'text-slate-400')}>{label}</span>
+            <div className="flex w-full items-center gap-2 px-0 sm:px-2 my-1.5 h-6">
+                {/* Left Side (Before) */}
+                <div className="flex-1 flex items-center justify-between gap-3 h-full overflow-hidden">
+                    <span className={`text-[10px] font-bold font-mono tracking-tighter shrink-0 w-8 text-right opacity-80 ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>{lVal}</span>
+                    <div className="h-full w-full flex justify-end items-center">
+                        <div className="h-full rounded-l-md transition-all duration-[1200ms] ease-out shadow-sm"
+                            style={{ width: `${leftWidth}%`, background: 'linear-gradient(to left, #8b5cf6, #6366f1)' }} />
                     </div>
                 </div>
-                <div className="space-y-1 text-center">
-                    <div className="flex items-center gap-1.5 text-[11px]">
-                        <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: secondaryStr }} />
-                        <span className={isDarkMode ? 'text-slate-400' : 'text-slate-500'}>{clsNames[0]}: <strong className={isDarkMode ? 'text-slate-200' : 'text-slate-700'}>{majority}%</strong></span>
+
+                {/* Spine */}
+                <div className="w-28 shrink-0 flex items-center justify-center">
+                    <span className={`text-[9px] font-black uppercase tracking-widest ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>{label}</span>
+                </div>
+
+                {/* Right Side (After) */}
+                <div className="flex-1 flex items-center justify-between gap-3 h-full overflow-hidden">
+                    <div className="h-full w-full flex justify-start items-center">
+                        <div className="h-full rounded-r-md transition-all duration-[1200ms] ease-out shadow-sm"
+                            style={{ width: `${rightWidth}%`, background: rBg }} />
                     </div>
-                    <div className="flex items-center gap-1.5 text-[11px]">
-                        <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: primaryStr }} />
-                        <span className={isDarkMode ? 'text-slate-400' : 'text-slate-500'}>{clsNames[1]}: <strong className={isDarkMode ? 'text-slate-200' : 'text-slate-700'}>{minority}%</strong></span>
-                    </div>
+                    <span className={`text-[10px] font-bold font-mono tracking-tighter shrink-0 w-8 text-left transition-colors duration-500 opacity-80 ${isApplied ? 'text-emerald-500 drop-shadow-sm' : (isDarkMode ? 'text-slate-300' : 'text-slate-600')}`}>{rVal}</span>
                 </div>
             </div>
         );
     };
 
     return (
-        <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className={'rounded-2xl p-5 ' + (isDarkMode ? 'bg-white/[0.02] border border-white/[0.06]' : 'bg-white border border-slate-200 shadow-sm')}
-        >
-            <div className="flex items-center gap-2 mb-5">
-                <Users className="w-4 h-4" style={{ color: primaryStr }} />
-                <span className={'text-xs font-bold uppercase tracking-wider ' + (isDarkMode ? 'text-slate-400' : 'text-slate-500')}>
-                    Class Balance — {imbalanceMethod === 'smote' ? 'SMOTE Applied' : 'No Resampling'}
-                </span>
-            </div>
-            <div className="flex items-center justify-center gap-10 flex-wrap">
-                <MiniDonut majority={beforeMajority} minority={beforeMinority} label="Before" delay={0} />
-                <motion.div
-                    initial={{ opacity: 0, scale: 0 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.5, type: 'spring', stiffness: 300, damping: 20 }}
-                    className={'p-2 rounded-full ' + (isDarkMode ? 'bg-white/[0.05]' : 'bg-slate-100')}
-                >
-                    <ArrowRight className="w-4 h-4" style={{ color: primaryStr }} />
-                </motion.div>
-                <MiniDonut majority={afterMajority} minority={afterMinority} label={imbalanceMethod === 'smote' ? 'After' : 'Same'} delay={0.4} />
-            </div>
-        </motion.div>
-    );
-});
+        <div className="w-full flex-1 flex flex-col pt-2 pb-0 animate-[fadeIn_0.5s_ease-out_forwards]">
 
-/* ═══════════════════════════════════════════════════════════════
-   Pipeline Step Indicator
-   ═══════════════════════════════════════════════════════════════ */
-const PipelineIndicator = ({ isApplied, isDarkMode, primaryStr, secondaryStr }) => {
-    const steps = [
-        { label: 'Missing Values', icon: Database },
-        { label: 'Normalise', icon: Scale },
-        { label: 'Split Data', icon: Split },
-        { label: 'Balance', icon: Users },
-    ];
+            {/* Headers */}
+            <div className="flex justify-between items-center w-full px-4 mb-4 border-b pb-3 border-slate-200 dark:border-white/10">
+                <div className="flex-1 text-right flex flex-col items-end px-2">
+                    <div className={`text-[11px] font-black uppercase tracking-widest mb-1 ${isDarkMode ? 'text-slate-200' : 'text-slate-700'}`}>Before</div>
+                    <div className={`px-2 py-0.5 rounded-[4px] text-[8px] font-bold uppercase tracking-wider bg-slate-200 text-slate-600 dark:bg-white/10 dark:text-slate-300`}>Raw Data</div>
+                </div>
 
-    return (
-        <div className="flex items-center justify-center gap-1 py-3">
-            {steps.map((step, i) => (
-                <React.Fragment key={step.label}>
-                    <motion.div
-                        initial={{ scale: 0, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        transition={{ delay: isApplied ? i * 0.12 : 0, duration: 0.4, type: 'spring', stiffness: 300, damping: 20 }}
-                        className={'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-semibold transition-all duration-500 ' + (
-                            isApplied
-                                ? ''
-                                : (isDarkMode ? 'bg-white/[0.03] text-slate-500' : 'bg-slate-50 text-slate-400')
-                        )}
-                        style={isApplied ? {
-                            backgroundColor: isDarkMode ? `${secondaryStr}12` : `${secondaryStr}08`,
-                            color: secondaryStr,
-                        } : {}}
-                    >
-                        {isApplied ? (
-                            <motion.div
-                                initial={{ scale: 0 }}
-                                animate={{ scale: 1 }}
-                                transition={{ delay: i * 0.12 + 0.2, type: 'spring', stiffness: 500 }}
-                            >
-                                <CheckCircle2 className="w-3 h-3" />
-                            </motion.div>
-                        ) : (
-                            <step.icon className="w-3 h-3" />
-                        )}
-                        <span className="hidden sm:inline">{step.label}</span>
-                    </motion.div>
-                    {i < steps.length - 1 && (
-                        <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: 16 }}
-                            transition={{ delay: isApplied ? i * 0.12 + 0.1 : 0, duration: 0.3 }}
-                            className={'h-px ' + (isApplied ? '' : (isDarkMode ? 'bg-slate-700' : 'bg-slate-200'))}
-                            style={isApplied ? { backgroundColor: `${secondaryStr}30` } : {}}
-                        />
-                    )}
-                </React.Fragment>
-            ))}
+                <div className="w-28 shrink-0 text-center text-[10px] font-black uppercase tracking-widest opacity-30">Metrics</div>
+
+                <div className="flex-1 text-left flex flex-col items-start px-2">
+                    <div className={`text-[11px] font-black uppercase tracking-widest mb-1 transition-colors duration-500 ${isApplied ? 'text-emerald-500' : (isDarkMode ? 'text-slate-200' : 'text-slate-700')}`}>After</div>
+                    <div className={`px-2 py-0.5 rounded-[4px] text-[8px] font-bold uppercase tracking-wider transition-colors duration-500 ${isApplied ? 'bg-emerald-500/20 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400' : 'bg-slate-200 text-slate-600 dark:bg-white/10 dark:text-slate-300'}`}>
+                        {isApplied ? 'Processed Data' : 'Pending Execute'}
+                    </div>
+                </div>
+            </div>
+
+            {/* Pyramid Rows */}
+            <div className="flex flex-col w-full flex-1 justify-center relative z-10">
+                <PyramidRow label="Min" lVal={rMin} rVal={aMin} lW={wRMin} rW={wAMin} />
+                <PyramidRow label="Avg" lVal={rAvg} rVal={aAvg} lW={wRAvg} rW={wAAvg} />
+                <PyramidRow label="Max" lVal={rMax} rVal={aMax} lW={wRMax} rW={wAMax} />
+
+                <div className="w-full flex justify-center my-1.5 opacity-50">
+                    <div className="w-1/2 h-px border-b border-dashed border-slate-300 dark:border-white/20"></div>
+                </div>
+
+                <PyramidRow label="Readmitted" lVal={rReadmit} rVal={aReadmit} lW={lPctR} rW={rPctR} isPctBox={true} />
+                <PyramidRow label="Not Readmitted" lVal={rNotReadmit} rVal={aNotReadmit} lW={lPctNR} rW={rPctNR} isPctBox={true} />
+            </div>
         </div>
     );
 };
 
 /* ═══════════════════════════════════════════════════════════════
-   Visualizations Panel
+   Smoothed Readiness Gauge Chart
    ═══════════════════════════════════════════════════════════════ */
-const VisualizationsPanel = React.memo(({ isApplied, isAnimating, isDarkMode, normMethod, imbalanceMethod, dataset, datasetSchema, targetColumn, primaryStr, secondaryStr }) => {
+const GaugeChart = ({ score, isDarkMode }) => {
+    const radius = 64;
+    const stroke = 12;
+    const cx = 100;
+    const cy = 100;
+
+    const cLength = Math.PI * radius;
+    const offset = cLength - (score / 100) * cLength;
+
     return (
-        <>
-            {/* Loading Overlay */}
-            <AnimatePresence>
-                {isAnimating && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="absolute inset-0 z-10 flex flex-col items-center justify-center space-y-5 rounded-3xl"
-                        style={{ backgroundColor: isDarkMode ? 'rgba(15,23,42,0.85)' : 'rgba(255,255,255,0.85)', backdropFilter: 'blur(8px)' }}
-                    >
-                        {/* Spinning rings */}
-                        <div className="relative w-16 h-16">
-                            <motion.div
-                                animate={{ rotate: 360 }}
-                                transition={{ duration: 1.2, repeat: Infinity, ease: 'linear' }}
-                                className="absolute inset-0 rounded-full border-[3px] border-t-transparent"
-                                style={{ borderColor: `${secondaryStr}25`, borderTopColor: secondaryStr }}
-                            />
-                            <motion.div
-                                animate={{ rotate: -360 }}
-                                transition={{ duration: 0.9, repeat: Infinity, ease: 'linear' }}
-                                className="absolute inset-2 rounded-full border-[3px] border-b-transparent"
-                                style={{ borderColor: `${primaryStr}25`, borderBottomColor: primaryStr }}
-                            />
-                            <div className="absolute inset-0 flex items-center justify-center">
-                                <FlaskConical className="w-5 h-5" style={{ color: primaryStr }} />
-                            </div>
-                        </div>
-                        <div className="text-center">
-                            <div className={'font-semibold text-sm ' + (isDarkMode ? 'text-slate-200' : 'text-slate-700')}>Applying transformations…</div>
-                            <div className={'text-xs mt-1 ' + (isDarkMode ? 'text-slate-500' : 'text-slate-400')}>Normalising • Handling gaps • Balancing classes</div>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+        <div className="relative flex flex-col items-center pt-8 mb-6">
+            <svg viewBox="0 0 200 110" className="w-56 h-auto drop-shadow-md">
+                <defs>
+                    <linearGradient id="gaugeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stopColor="#f59e0b" />
+                        <stop offset="100%" stopColor="#10b981" />
+                    </linearGradient>
+                </defs>
+                {/* Background track */}
+                <path d={`M ${cx - radius},${cy} A ${radius},${radius} 0 0,1 ${cx + radius},${cy}`}
+                    fill="none" stroke={isDarkMode ? '#ffffff08' : '#e2e8f080'} strokeWidth={stroke} strokeLinecap="round" />
+                {/* Inner track */}
+                <path d={`M ${cx - radius},${cy} A ${radius},${radius} 0 0,1 ${cx + radius},${cy}`}
+                    fill="none" stroke="url(#gaugeGrad)" strokeWidth={stroke} strokeLinecap="round"
+                    strokeDasharray={cLength} strokeDashoffset={offset}
+                    className="transition-all duration-1000 ease-[cubic-bezier(0.16,1,0.3,1)]" />
 
-            {!isApplied && !isAnimating ? (
-                <div className="flex flex-col items-center justify-center flex-grow text-center space-y-6 py-16">
-                    {/* Animated illustration */}
-                    <div className="relative w-28 h-28">
-                        <motion.div
-                            className={`absolute inset-0 rounded-full border-2 ${isDarkMode ? 'border-slate-700' : 'border-slate-200'}`}
-                            animate={{ scale: [1, 1.15, 1], opacity: [0.3, 0.1, 0.3] }}
-                            transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-                        />
-                        <div className={`absolute inset-3 rounded-full border ${isDarkMode ? 'border-slate-700/60' : 'border-slate-200/80'}`} />
-                        <div className="absolute inset-0 flex items-center justify-center">
-                            <motion.div
-                                animate={{ rotate: [0, 5, 0, -5, 0] }}
-                                transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-                                className={'p-4 rounded-2xl ' + (isDarkMode ? 'bg-slate-800 border border-slate-700' : 'bg-white border border-slate-200 shadow-sm')}
-                            >
-                                <Sliders className={'w-8 h-8 ' + (isDarkMode ? 'text-slate-500' : 'text-slate-400')} />
-                            </motion.div>
-                        </div>
-                        <motion.div
-                            className="absolute -top-1 -right-1"
-                            animate={{ y: [0, -6, 0] }}
-                            transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
-                        >
-                            <div className={'p-1.5 rounded-lg ' + (isDarkMode ? 'bg-indigo-500/20 border border-indigo-500/30' : 'bg-indigo-50 border border-indigo-100')}>
-                                <BarChart3 className={'w-3.5 h-3.5 ' + (isDarkMode ? 'text-indigo-400' : 'text-indigo-500')} />
-                            </div>
-                        </motion.div>
-                        <motion.div
-                            className="absolute -bottom-1 -left-1"
-                            animate={{ y: [0, 5, 0] }}
-                            transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
-                        >
-                            <div className={'p-1.5 rounded-lg ' + (isDarkMode ? 'bg-emerald-500/20 border border-emerald-500/30' : 'bg-emerald-50 border border-emerald-100')}>
-                                <Scale className={'w-3.5 h-3.5 ' + (isDarkMode ? 'text-emerald-400' : 'text-emerald-500')} />
-                            </div>
-                        </motion.div>
-                    </div>
-
-                    <div className="space-y-2">
-                        <p className={`text-lg font-semibold ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
-                            Configure settings on the left and click &quot;Apply&quot; to see the transformation results.
-                        </p>
-                        <p className={`text-sm max-w-md ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
-                            You can adjust the train/test split, missing value strategy, normalisation method, and class imbalance handling.
-                        </p>
-                    </div>
-
-                    <div className={`flex items-center gap-2 text-xs font-medium px-3 py-1.5 rounded-full border ${isDarkMode ? 'border-slate-700 text-slate-500 bg-slate-800/50' : 'border-slate-200 text-slate-400 bg-slate-50'}`}>
-                        <ArrowLeft className="w-3 h-3" />
-                        <span>Adjust settings then Apply</span>
-                    </div>
-                </div>
-            ) : isApplied && !isAnimating ? (
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.6 }}
-                    className="flex flex-col space-y-5"
-                >
-                    <NormalisationViz normMethod={normMethod} isDarkMode={isDarkMode} dataset={dataset} datasetSchema={datasetSchema} primaryStr={primaryStr} secondaryStr={secondaryStr} />
-                    <ClassBalanceViz imbalanceMethod={imbalanceMethod} isDarkMode={isDarkMode} dataset={dataset} targetColumn={targetColumn} primaryStr={primaryStr} secondaryStr={secondaryStr} />
-                </motion.div>
-            ) : null}
-        </>
+            </svg>
+            <div className="absolute top-[82px] left-1/2 -translate-x-1/2 flex flex-col items-center w-full">
+                <div className={`text-4xl font-black tracking-tighter ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>{Math.round(score)}<span className="text-2xl text-slate-400 font-bold ml-0.5">%</span></div>
+                <div className={`text-[9px] mt-1 font-bold uppercase tracking-widest ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>Integrity Score</div>
+            </div>
+        </div>
     );
-});
+};
 
 /* ═══════════════════════════════════════════════════════════════
-   Main DataPreparation Component
+   Main Component
    ═══════════════════════════════════════════════════════════════ */
 const DataPreparation = ({ isDarkMode, onNext, onPrev, domain, patientCount, dataset, datasetSchema, targetColumn }) => {
     const primaryStr = domain?.theme?.primary || '#6366f1';
-    const secondaryStr = domain?.theme?.secondary || '#10b981';
 
-
-
+    // Core ML states mapped to aesthetic widgets
     const [splitRatio, setSplitRatio] = useState(80);
-    const [missingValueMethod, setMissingValueMethod] = useState('median');
-    const [normalizationMethod, setNormalizationMethod] = useState('z-score');
-    const [imbalanceMethod, setImbalanceMethod] = useState('smote');
+
+    const missingOpts = ['Median Fill', 'Mode Fill', 'Drop Rows'];
+    const normOpts = ['Z-Score', 'Min-Max', 'None'];
+    const smoteOpts = ['SMOTE Oversampling', 'None'];
+
+    const [missIdx, setMissIdx] = useState(0);
+    const [normIdx, setNormIdx] = useState(0);
+    const [smoteIdx, setSmoteIdx] = useState(0);
+
     const [isApplied, setIsApplied] = useState(false);
     const [isAnimating, setIsAnimating] = useState(false);
 
-    // Use real patient count from DataExploration; fallback to 300
-    const totalPatients = patientCount > 0 ? patientCount : 300;
+    const totalPatients = patientCount > 0 ? patientCount : 359;
     const trainCount = Math.round(totalPatients * (splitRatio / 100));
     const testCount = totalPatients - trainCount;
 
-    const handleApply = useCallback(() => {
-        setIsAnimating(true);
-        setTimeout(() => {
-            setIsApplied(true);
-            setIsAnimating(false);
-        }, 1500); // Fake processing delay
-    }, []);
+    const dynamicGaugeScore = useMemo(() => {
+        if (!dataset || dataset.length === 0) return { raw: 64, applied: 98 };
 
-    // For re-apply tracking
-    const handleSettingsChange = (setter) => (val) => {
-        const newVal = typeof val === 'object' ? val.target.value : val;
-        setter(newVal);
-        if (isApplied) {
-            setIsApplied(false);
+        let validRows = 0;
+        let totalRows = dataset.length;
+        let missingCells = 0;
+        let totalCells = 0;
+
+        dataset.forEach(row => {
+            let hasMissing = false;
+            Object.values(row).forEach(v => {
+                totalCells++;
+                if (v === null || v === undefined || v === '') {
+                    hasMissing = true;
+                    missingCells++;
+                }
+            });
+            if (!hasMissing) validRows++;
+        });
+
+        const tCol = datasetSchema?.find(s => s.role === 'Target')?.name;
+        let imbalancePenalty = 0;
+
+        if (tCol) {
+            const classCounts = {};
+            dataset.forEach(row => {
+                if (row[tCol] !== undefined) {
+                    classCounts[row[tCol]] = (classCounts[row[tCol]] || 0) + 1;
+                }
+            });
+            const counts = Object.values(classCounts).sort((a, b) => b - a);
+            if (counts.length >= 2) {
+                const ratio = counts[1] / counts[0];
+                if (ratio < 0.4) imbalancePenalty = (0.4 - ratio) * 60;
+            }
         }
-    };
 
-    const missingOptions = [
-        { value: 'median', label: 'Fill with median (recommended)' },
-        { value: 'mode', label: 'Fill with most common value' },
-        { value: 'remove', label: 'Remove incomplete rows' },
-    ];
-    const normOptions = [
-        { value: 'z-score', label: 'Z-score (recommended)' },
-        { value: 'min-max', label: 'Min-Max Scaling (0–1)' },
-        { value: 'none', label: 'None (raw values)' },
-    ];
-    const imbalanceOptions = [
-        { value: 'smote', label: 'SMOTE — synthetic oversampling' },
-        { value: 'none', label: 'None — keep original' },
-    ];
+        const missingPenalty = (missingCells / Math.max(totalCells, 1)) * 400;
 
-    const missingHelp = {
-        'median': 'Fills gaps with the middle value. Preserves all patients and is robust to outliers.',
-        'mode': 'Fills gaps with the most frequently occurring value in each column.',
-        'remove': 'Removes rows with any missing values. May reduce your dataset size significantly.',
-    };
-    const normHelp = {
-        'z-score': 'Centers data around mean (0) with standard deviation of 1. Best for most ML models.',
-        'min-max': 'Scales all values to [0, 1]. Useful when bounded values are needed.',
-        'none': 'No scaling. Only suitable for tree-based models that are scale-invariant.',
-    };
-    const imbalanceHelp = {
-        'smote': 'Generates synthetic examples of the minority class so both classes are equally represented.',
-        'none': 'Keeps original class distribution. The model may bias towards the majority class.',
+        let rawScore = 100 - missingPenalty - imbalancePenalty - 15;
+        if (rawScore < 35) rawScore = 35;
+        if (rawScore > 85) rawScore = 85;
+
+        let appliedScore = 100;
+
+        if (missingOpts[missIdx] === 'Drop Rows' && (totalRows - validRows) / Math.max(totalRows, 1) > 0.1) {
+            appliedScore -= 8;
+        }
+        if (normOpts[normIdx] === 'None') {
+            appliedScore -= 12;
+        }
+        if (smoteOpts[smoteIdx] === 'None' && imbalancePenalty > 5) {
+            appliedScore -= 15;
+        }
+
+        return { raw: Math.floor(rawScore), applied: Math.floor(appliedScore) };
+    }, [dataset, datasetSchema, missIdx, normIdx, smoteIdx]);
+
+    const gaugeScore = isApplied ? dynamicGaugeScore.applied : dynamicGaugeScore.raw;
+
+    const handleApply = () => {
+        setIsAnimating(true);
+        setTimeout(() => { setIsApplied(true); setIsAnimating(false); }, 1500);
     };
 
     return (
-        <motion.div variants={containerAnim} initial="hidden" animate="show" className="relative w-full pb-20">
+        <motion.div variants={containerAnim} initial="hidden" animate="show" className="relative w-full pb-44 max-w-[1400px] mx-auto overflow-hidden">
             <FloatingParticles isDarkMode={isDarkMode} primaryStr={primaryStr} />
 
-            <div className="relative z-10 space-y-8">
-                {/* ═══════════════ HEADER ═══════════════ */}
-                <motion.div variants={itemAnim} className="mb-2">
-                    <motion.p 
-                        className="hero-subtitle" 
-                        initial={{ opacity: 0 }} 
-                        animate={{ opacity: 1 }}
-                        style={{ textAlign: 'center', marginBottom: 32 }}
-                    >
-                        Preprocessing Options
-                    </motion.p>
-                </motion.div>
+            <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-5 px-6 pt-6">
 
-                {/* ── Pipeline Progress ── */}
-                <motion.div variants={itemAnim}>
-                    <PipelineIndicator isApplied={isApplied} isDarkMode={isDarkMode} primaryStr={primaryStr} secondaryStr={secondaryStr} />
-                </motion.div>
+                {/* ─ 左侧大列 (Left Column: span 8) ─ */}
+                <div className="lg:col-span-8 flex flex-col gap-5">
 
-                {/* ═══════════════ MAIN BENTO GRID ═══════════════ */}
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-
-                    {/* ── Left Column: iOS List Settings ── */}
-                    <motion.div variants={itemAnim} className="lg:col-span-4 space-y-4">
-                        <motion.div className="ios-list">
-                            {/* Train / Test Split */}
-                            <div className="ios-list-item" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-                                    <div>
-                                        <div className="ios-list-title">Data Split</div>
-                                        <div className="ios-list-subtitle">Train / Test ratio</div>
-                                    </div>
-                                    <div style={{ fontWeight: 700, color: primaryStr }}>{splitRatio}%</div>
-                                </div>
-                                <input
-                                    type="range"
-                                    min="60"
-                                    max="90"
-                                    value={splitRatio}
-                                    onChange={(e) => {
-                                        setSplitRatio(parseInt(e.target.value));
-                                        if (isApplied) setIsApplied(false);
-                                    }}
-                                    className={'premium-slider w-full h-1.5 mb-3 ' + (isDarkMode ? 'bg-slate-700/50' : 'bg-slate-200')}
-                                    style={{
-                                        background: `linear-gradient(to right, ${primaryStr} ${((splitRatio - 60) / (90 - 60)) * 100}%, ${isDarkMode ? '#334155' : '#e2e8f0'} ${((splitRatio - 60) / (90 - 60)) * 100}%)`,
-                                    }}
-                                />
-                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85em', color: 'var(--text-sec)' }}>
-                                    <span>Train: {trainCount}</span>
-                                    <span>Test: {testCount}</span>
-                                </div>
-                            </div>
-
-                            {/* Missing Values */}
-                            <div className="ios-list-item" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
-                                <div>
-                                    <div className="ios-list-title">Missing Values</div>
-                                    <div className="ios-list-subtitle">How to handle empty fields</div>
-                                </div>
-                                <SegmentedControl
-                                    options={[
-                                        { value: 'median', label: 'Median' },
-                                        { value: 'mode', label: 'Mode' },
-                                        { value: 'remove', label: 'Drop' }
-                                    ]}
-                                    selected={missingValueMethod}
-                                    onChange={handleSettingsChange(setMissingValueMethod)}
-                                />
-                            </div>
-
-                            {/* Normalisation */}
-                            <div className="ios-list-item" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
-                                <div>
-                                    <div className="ios-list-title">Normalisation</div>
-                                    <div className="ios-list-subtitle">Scale variables evenly</div>
-                                </div>
-                                <SegmentedControl
-                                    options={[
-                                        { value: 'z-score', label: 'Z-Score' },
-                                        { value: 'min-max', label: 'Min-Max' },
-                                        { value: 'none', label: 'None' }
-                                    ]}
-                                    selected={normalizationMethod}
-                                    onChange={handleSettingsChange(setNormalizationMethod)}
-                                />
-                            </div>
-
-                            {/* Class Imbalance */}
-                            <div className="ios-list-item">
-                                <div>
-                                    <div className="ios-list-title">Address Imbalance (SMOTE)</div>
-                                    <div className="ios-list-subtitle">Generate synthetic data</div>
-                                </div>
-                                <IosSwitch
-                                    checked={imbalanceMethod === 'smote'}
-                                    onChange={(val) => handleSettingsChange(setImbalanceMethod)(val ? 'smote' : 'none')}
-                                />
-                            </div>
-                        </motion.div>
-
-                        {/* Apply Button */}
-                        <motion.button
-                            onClick={handleApply}
-                            disabled={isAnimating}
-                            whileHover={!isAnimating ? { scale: 1.01, y: -1 } : {}}
-                            whileTap={!isAnimating ? { scale: 0.98 } : {}}
-                            initial={{ opacity: 0, y: 16 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.5, delay: 0.5 }}
-                            className={'w-full py-4 rounded-2xl font-bold text-white text-sm transition-all duration-300 flex items-center justify-center gap-2 ios-card ' + (isAnimating ? 'cursor-wait opacity-70' : '')}
-                            style={{
-                                backgroundColor: isApplied ? secondaryStr : primaryStr,
-                                boxShadow: `0 8px 30px ${isApplied ? secondaryStr : primaryStr}30`,
-                                marginTop: 16, padding: '16px', margin: '16px 0 0 0'
-                            }}
-                        >
-                            {isAnimating ? (
-                                <>
-                                    <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}>
-                                        <FlaskConical className="w-4 h-4" />
-                                    </motion.div>
-                                    Processing…
-                                </>
-                            ) : isApplied ? (
-                                <>
-                                    <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 400 }}>
-                                        <CheckCircle2 className="w-4 h-4" />
-                                    </motion.div>
-                                    Settings Applied
-                                </>
-                            ) : (
-                                <>
-                                    <Zap className="w-4 h-4" />
-                                    Apply Preparation Settings
-                                </>
-                            )}
-                        </motion.button>
-                    </motion.div>
-
-                    {/* ── Right Column: Visualizations ── */}
-                    <motion.div variants={itemAnim} className="lg:col-span-8 space-y-5">
-
-                        {/* Main Visualization Panel */}
-                        <div className={'relative min-h-[500px] flex flex-col overflow-hidden rounded-3xl p-6 transition-all duration-300 ' + (isDarkMode 
-                            ? 'bg-white/[0.02] border border-white/[0.06]' 
-                            : 'bg-white border border-slate-200 shadow-sm')}
-                        >
-                            <VisualizationsPanel
-                                isApplied={isApplied}
-                                isAnimating={isAnimating}
-                                isDarkMode={isDarkMode}
-                                normMethod={normalizationMethod}
-                                imbalanceMethod={imbalanceMethod}
-                                dataset={dataset}
-                                datasetSchema={datasetSchema}
-                                targetColumn={targetColumn}
-                                primaryStr={primaryStr}
-                                secondaryStr={secondaryStr}
-                            />
+                    {/* TOP LEFT: Strategies */}
+                    <motion.div variants={itemAnim} className={`rounded-[32px] p-6 lg:p-8 flex-shrink-0 backdrop-blur-3xl shadow-sm ${isDarkMode ? 'bg-white/[0.015] border border-white/[0.04]' : 'bg-white/80 border border-slate-200/60'}`}>
+                        <div className="flex items-center mb-8 px-2">
+                            <h2 className={`text-[17px] font-bold tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>Data Preparation Strategy</h2>
                         </div>
 
-                        {/* ── Minimal Success Indicator ── */}
-                        <AnimatePresence>
-                            {isApplied && (
-                                <motion.div
-                                    initial={{ opacity: 0, height: 0 }}
-                                    animate={{ opacity: 1, height: 'auto' }}
-                                    exit={{ opacity: 0, height: 0 }}
-                                    className="flex items-center justify-center -mt-2 mb-2"
-                                >
-                                    <Tooltip
-                                        position="top"
-                                        noUnderline
-                                        isDarkMode={isDarkMode}
-                                        content={
-                                            <div className="flex flex-col gap-2 p-1">
-                                                <div className="font-bold border-b pb-1 mb-1 border-emerald-500/20 text-emerald-500">
-                                                    Prepared & Ready
-                                                </div>
-                                                <p className="opacity-90">
-                                                    Reserved <strong>{testCount}</strong> patients for testing.
-                                                    Remaining <strong>{trainCount}</strong> are balanced & scaled.
-                                                </p>
-                                                <div className="flex flex-wrap gap-1 mt-1 text-[9px] font-mono opacity-80 uppercase">
-                                                    <span className="bg-emerald-500/20 px-1.5 py-0.5 rounded">Split: {splitRatio}/{100 - splitRatio}</span>
-                                                    <span className="bg-emerald-500/20 px-1.5 py-0.5 rounded">Missing: {missingValueMethod.substring(0,6)}</span>
-                                                    <span className="bg-emerald-500/20 px-1.5 py-0.5 rounded">Norm: {normalizationMethod}</span>
-                                                    <span className="bg-emerald-500/20 px-1.5 py-0.5 rounded">Bal: {imbalanceMethod}</span>
-                                                </div>
-                                            </div>
-                                        }
-                                    >
-                                        <div className={'flex items-center gap-2 px-4 py-2 rounded-full cursor-help transition-all duration-300 border '
-                                            + (isDarkMode ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20' : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100')}>
-                                            <CheckCircle2 className="w-4 h-4" />
-                                            <span className="text-[11px] font-bold uppercase tracking-wider">Data Is Ready For Modeling</span>
-                                        </div>
-                                    </Tooltip>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                            <MetricSubCard
+                                title="Missing Values"
+                                options={missingOpts}
+                                selectedIdx={missIdx}
+                                onSelect={(val) => { setMissIdx(val); setIsApplied(false); }}
+                                subtext={missIdx === 2 ? "Removes missing rows" : "Imputes central value"}
+                                trend={1} icon={Database} color="#10b981"
+                                isDarkMode={isDarkMode}
+                            />
+                            <MetricSubCard
+                                title="Normalisation"
+                                options={normOpts}
+                                selectedIdx={normIdx}
+                                onSelect={(val) => { setNormIdx(val); setIsApplied(false); }}
+                                subtext={normIdx === 2 ? "Leaves variants raw" : "Scales variance uniformly"}
+                                trend={1} icon={Scale} color="#3b82f6"
+                                isDarkMode={isDarkMode}
+                            />
+                            <MetricSubCard
+                                title="Class Imbalance"
+                                options={smoteOpts}
+                                selectedIdx={smoteIdx}
+                                onSelect={(val) => { setSmoteIdx(val); setIsApplied(false); }}
+                                subtext={smoteIdx === 1 ? "Keeps natural imbalance" : "Synthetic balancing"}
+                                trend={1} icon={Users} color="#8b5cf6"
+                                isDarkMode={isDarkMode}
+                            />
+                        </div>
                     </motion.div>
+
+                    {/* BOTTOM LEFT: Sankey Allocation */}
+                    <motion.div variants={itemAnim} className={`flex-1 rounded-[32px] p-6 lg:p-8 flex flex-col backdrop-blur-3xl shadow-sm ${isDarkMode ? 'bg-white/[0.015] border border-white/[0.04]' : 'bg-white/80 border border-slate-200/60'}`}>
+                        <div className="flex items-center mb-8 px-2">
+                            <h2 className={`text-[17px] font-bold tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>Train & Test Set Allocation</h2>
+                        </div>
+                        <DataAllocationChart splitRatio={splitRatio} trainCount={trainCount} testCount={testCount} totalCount={totalPatients} isDarkMode={isDarkMode} />
+
+                        {/* Beautiful Smooth Slider */}
+                        <div className="mt-auto pt-8 px-2">
+                            <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest mb-3 opacity-60">
+                                <span className={isDarkMode ? 'text-slate-400' : 'text-slate-500'}>Drag to adjust allocation</span>
+                                <span className={isDarkMode ? 'text-slate-300' : 'text-slate-600'}>{splitRatio}% Training Ratio</span>
+                            </div>
+                            <div className="relative h-1.5 w-full rounded-full overflow-visible" style={{ background: isDarkMode ? '#ffffff10' : '#e2e8f0' }}>
+                                <div className="absolute top-0 left-0 h-full rounded-full transition-all" style={{ width: `${((splitRatio - 60) / 30) * 100}%`, background: '#8b5cf6' }} />
+                                <input type="range" min="60" max="90" value={splitRatio}
+                                    onChange={(e) => { setSplitRatio(parseInt(e.target.value)); setIsApplied(false); }}
+                                    className="absolute inset-0 w-full h-full opacity-0 cursor-ew-resize z-10"
+                                />
+                                {/* Custom Thumb */}
+                                <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-4 bg-white rounded-full shadow-[0_0_10px_rgba(0,0,0,0.1)] border-2 border-[#8b5cf6] pointer-events-none transition-all"
+                                    style={{ left: `${((splitRatio - 60) / 30) * 100}%` }} />
+                            </div>
+                        </div>
+                    </motion.div>
+
                 </div>
 
-                {/* ── Bottom Navigation ── */}
-                <motion.div variants={itemAnim} className={`flex justify-between items-center pt-8 border-t ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
-                    <motion.button
-                        onClick={onPrev}
-                        whileHover={{ x: -3 }}
-                        whileTap={{ scale: 0.97 }}
-                        className={'px-5 py-2.5 rounded-xl text-sm font-medium transition-colors ' + (isDarkMode
-                            ? 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/50'
-                            : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50')}
-                    >
-                        ← Previous
-                    </motion.button>
-                    <motion.button
-                        onClick={onNext}
-                        disabled={!isApplied}
-                        whileHover={isApplied ? { scale: 1.02, x: 3 } : {}}
-                        whileTap={isApplied ? { scale: 0.97 } : {}}
-                        className={'flex items-center gap-2 px-6 py-2.5 rounded-2xl text-sm font-semibold transition-all duration-300 ' + (isApplied
-                            ? 'text-white shadow-lg'
-                            : isDarkMode ? 'bg-slate-800 text-slate-500 cursor-not-allowed' : 'bg-slate-100 text-slate-400 cursor-not-allowed')}
-                        style={isApplied ? { backgroundColor: primaryStr, boxShadow: `0 8px 30px ${primaryStr}35` } : {}}
-                    >
-                        Continue <ArrowRight className="w-4 h-4" />
-                    </motion.button>
-                </motion.div>
+                {/* ─ 右侧大列 (Right Column: span 4) ─ */}
+                <div className="lg:col-span-4 flex flex-col gap-5">
+
+                    {/* TOP RIGHT: Normalisation Before/After */}
+                    <motion.div variants={itemAnim} className={`rounded-[32px] p-6 lg:p-8 flex flex-col backdrop-blur-3xl shadow-sm ${isDarkMode ? 'bg-white/[0.015] border border-white/[0.04]' : 'bg-white/80 border border-slate-200/60'}`}>
+                        <div className="flex items-center mb-0 px-1">
+                            <h2 className={`text-[17px] font-bold tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>Transformation Analysis</h2>
+                        </div>
+                        <UnifiedTransformationChart
+                            isDarkMode={isDarkMode}
+                            isApplied={isApplied}
+                            normMethod={normOpts[normIdx]}
+                            smoteMethod={smoteOpts[smoteIdx]}
+                            dataset={dataset}
+                            datasetSchema={datasetSchema}
+                            targetColumn={targetColumn}
+                        />
+                    </motion.div>
+
+                    {/* BOTTOM RIGHT: Gauge & Apply */}
+                    <motion.div variants={itemAnim} className={`flex-1 rounded-[32px] p-6 lg:p-8 flex flex-col backdrop-blur-3xl shadow-sm relative overflow-hidden ${isDarkMode ? 'bg-white/[0.015] border border-white/[0.04]' : 'bg-white/80 border border-slate-200/60'}`}>
+                        <div className="flex items-center mb-2 px-1 relative z-10">
+                            <h2 className={`text-[17px] font-bold tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>Preparation Status</h2>
+                        </div>
+
+                        <GaugeChart score={gaugeScore} isDarkMode={isDarkMode} />
+
+                        <div className="flex justify-between items-center w-full px-2 mt-4 mb-3 text-[11px] font-bold relative z-10">
+                            <span className={`opacity-60 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Review transformation log</span>
+                            <span className="text-emerald-500 cursor-pointer hover:text-emerald-400 transition-colors flex items-center gap-1">Details <ArrowRight className="w-3 h-3" /></span>
+                        </div>
+
+                        <div className={`mt-auto p-4 rounded-[16px] flex items-start gap-3 backdrop-blur-md relative z-10 
+                            ${isDarkMode ? 'bg-white/[0.02] border border-white/[0.05]' : 'bg-slate-50/80 border border-slate-100'}`}>
+                            <div className={`p-1.5 rounded-lg shrink-0 mt-0.5 ${isApplied ? 'bg-emerald-500/20 text-emerald-500' : 'bg-amber-500/20 text-amber-500'}`}>
+                                {isApplied ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Settings2 className="w-3.5 h-3.5" />}
+                            </div>
+                            <p className={`text-[11px] font-medium leading-relaxed opacity-80 ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+                                {isApplied ? 'Data is clean, scale-normalized, balanced, and strictly split for model ingestion.' : 'Pending execute. Raw arrays hold varying magnitudes with missing data potentials.'}
+                            </p>
+                        </div>
+
+                        <motion.button
+                            onClick={handleApply} disabled={isAnimating || isApplied}
+                            whileHover={!isAnimating && !isApplied ? { scale: 1.02 } : {}} whileTap={!isAnimating && !isApplied ? { scale: 0.98 } : {}}
+                            className={`w-full mt-5 py-4 rounded-[20px] font-bold text-white text-[13px] transition-all duration-500 flex items-center justify-center gap-2 relative z-10
+                                ${isAnimating ? 'cursor-wait opacity-80' : isApplied ? 'cursor-default opacity-90' : 'hover:shadow-[0_8px_20px_-6px_rgba(236,72,153,0.4)]'}`}
+                            style={{
+                                background: isApplied ? '#10b981' : isDarkMode ? 'linear-gradient(135deg, #f43f5e, #ec4899)' : 'linear-gradient(135deg, #e11d48, #be185d)'
+                            }}
+                        >
+                            {isAnimating ? (<><motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}><Zap className="w-4 h-4" /></motion.div> Processing...</>)
+                                : isApplied ? (<>Ready for Modeling</>)
+                                    : (<>Execute Preparations</>)}
+                        </motion.button>
+
+                        {/* Decorative background glow for button */}
+                        {!isApplied && (
+                            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-3/4 h-12 bg-rose-500/30 blur-2xl rounded-full z-0 pointer-events-none" />
+                        )}
+                    </motion.div>
+
+                </div>
             </div>
+
+            {/* ── Bottom Navigation ── */}
+            <motion.div variants={itemAnim} className={`relative z-10 px-6 mt-10 mb-4 flex justify-between items-center pt-8 border-t ${isDarkMode ? 'border-white/[0.04]' : 'border-slate-200/60'}`}>
+                <motion.button onClick={onPrev} whileHover={{ x: -2 }} whileTap={{ scale: 0.98 }}
+                    className={`px-5 py-3 rounded-[16px] text-[13px] font-bold transition-all ${isDarkMode ? 'bg-white/[0.03] text-slate-400 hover:text-slate-200 hover:bg-white/[0.06]' : 'bg-white border border-slate-200 text-slate-500 hover:text-slate-800 shadow-sm'}`}>
+                    Previous Phase
+                </motion.button>
+                <motion.button onClick={onNext} disabled={!isApplied}
+                    whileHover={isApplied ? { scale: 1.02, x: 2 } : {}} whileTap={isApplied ? { scale: 0.98 } : {}}
+                    className={`flex items-center gap-2 px-6 py-3 rounded-[18px] text-[13px] font-bold transition-all duration-500 ${isApplied
+                        ? 'bg-[#6366f1] text-white shadow-[0_8px_16px_-6px_rgba(99,102,241,0.5)] hover:bg-[#4f46e5]'
+                        : isDarkMode ? 'bg-white/[0.03] border border-white/[0.05] text-slate-500 cursor-not-allowed' : 'bg-slate-100 text-slate-400 cursor-not-allowed hidden'}`}
+                >
+                    {isApplied ? (
+                        <>Proceed to Model Selection <ArrowRight className="w-4 h-4" /></>
+                    ) : "Next Step"}
+                </motion.button>
+            </motion.div>
+
         </motion.div>
     );
 };

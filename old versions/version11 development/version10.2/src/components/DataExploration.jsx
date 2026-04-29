@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 // eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence, useMotionValue, useTransform, useSpring } from 'framer-motion';
-import { Upload, AlertTriangle, ArrowRight, AlertCircle, Database, FileWarning, CheckCircle2, XCircle, Sparkles, BarChart3, Target, Layers, Shield, ChevronDown } from 'lucide-react';
+import { Upload, AlertTriangle, ArrowRight, AlertCircle, Database, FileWarning, CheckCircle2, XCircle, Sparkles, BarChart3, Target, Layers, Shield, ChevronDown, Activity, Settings2, LayoutTemplate, ActivitySquare, Users } from 'lucide-react';
 import ColumnMapper from './ColumnMapper';
 import Papa from 'papaparse';
 import { stratifiedSample } from '../utils/mlEngine';
@@ -301,26 +301,215 @@ const MeasurementCard = ({ item, index, isTarget, isDarkMode, primaryStr, format
 };
 
 /* ═══════════════════════════════════════════════════════════════
-   Stat Card — iOS Style Widget
+   NEW DASHBOARD WIDGETS
    ═══════════════════════════════════════════════════════════════ */
-const StatCard = ({ value, label, icon: Icon, isDarkMode, delay, color, suffix = '', type }) => (
+const DashboardStatCard = ({ value, label, subtitle, icon: Icon, isDarkMode, delay, color, suffix = '', trend = null }) => (
     <motion.div 
-        className="ios-card" 
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay: delay, type: 'spring' }}
-        style={{ background: type === 'features' ? 'linear-gradient(135deg, var(--ios-orange), #ffb340)' : type === 'missing' ? 'linear-gradient(135deg, var(--ios-pink), #ff3b30)' : 'linear-gradient(135deg, var(--ios-blue), #2c9aff)', color: 'white', padding: '24px', margin: 0, display: 'flex', flexDirection: 'column', height: '100%' }}
+        className="relative overflow-hidden group" 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: delay, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+        style={{ 
+            background: isDarkMode ? 'rgba(255,255,255,0.02)' : 'white', 
+            borderRadius: 24, padding: '24px', margin: 0, display: 'flex', flexDirection: 'column', height: '100%', 
+            border: isDarkMode ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(0,0,0,0.05)', 
+            boxShadow: isDarkMode ? '0 4px 20px rgba(0,0,0,0.2)' : '0 4px 20px rgba(0,0,0,0.03)' 
+        }}
     >
-        <Icon size={28} opacity={0.8} color="white" />
-        <div style={{ marginTop: 'auto', paddingTop: '24px' }}>
-            <div style={{ fontSize: '3rem', fontWeight: 800, lineHeight: 1, color: 'white' }}>
-                <AnimatedNumber value={value} isDarkMode={isDarkMode} suffix={suffix} colorClass="text-white" />
+        <div className="flex justify-between items-start mb-4">
+            <div className="p-3.5 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110 duration-300" style={{ backgroundColor: `${color}15`, color: color }}>
+                <Icon size={24} strokeWidth={2.5} />
             </div>
-            <div style={{ fontWeight: 600, opacity: 0.9, marginTop: 4 }}>{label}</div>
         </div>
+        <div className="relative z-10">
+            <div className={`text-[11px] font-bold uppercase tracking-wider mb-2 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>{label}</div>
+            <div className={`text-4xl font-extrabold tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                <AnimatedNumber value={value} isDarkMode={isDarkMode} suffix={suffix} colorClass={isDarkMode ? 'text-white' : 'text-slate-900'} />
+            </div>
+            {subtitle && <div className={`text-xs mt-2 font-medium ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>{subtitle}</div>}
+        </div>
+        {/* Subtle background wave/line */}
+        <svg className="absolute bottom-0 left-0 w-full h-[100px] opacity-[0.15] pointer-events-none" viewBox="0 0 100 40" preserveAspectRatio="none">
+             <path d="M0,40 Q25,10 50,20 T100,5 L100,40 L0,40" fill="none" stroke={color} strokeWidth="2" />
+             <path d="M0,40 Q25,10 50,20 T100,5 L100,40 L0,40 Z" fill={`url(#grad-${color.replace('#','')})`} />
+             <defs>
+                 <linearGradient id={`grad-${color.replace('#','')}`} x1="0" y1="0" x2="0" y2="1">
+                     <stop offset="0%" stopColor={color} stopOpacity="1" />
+                     <stop offset="100%" stopColor={color} stopOpacity="0" />
+                 </linearGradient>
+             </defs>
+        </svg>
     </motion.div>
 );
 
+const GaugeChart = ({ value, label, subtitle, color, isDarkMode }) => {
+    const radius = 70;
+    const strokeWidth = 16;
+    const circumference = Math.PI * radius; // Half circle
+    const offset = circumference - (value / 100) * circumference;
+
+    return (
+        <div className="flex flex-col items-center justify-center relative w-full h-full min-h-[220px] pt-4">
+            <div className="relative" style={{ width: 180, height: 100 }}>
+                {/* Background arc */}
+                <svg viewBox="0 0 180 100" className="w-full h-full overflow-visible">
+                    <path
+                        d="M 20 90 A 70 70 0 0 1 160 90"
+                        fill="none"
+                        stroke={isDarkMode ? 'rgba(255,255,255,0.05)' : '#f1f5f9'}
+                        strokeWidth={strokeWidth}
+                        strokeLinecap="round"
+                    />
+                    {value > 0 && (
+                        <motion.path
+                            d="M 20 90 A 70 70 0 0 1 160 90"
+                            fill="none"
+                            stroke={color}
+                            strokeWidth={strokeWidth}
+                            strokeLinecap="round"
+                            strokeDasharray={circumference}
+                            strokeDashoffset={circumference}
+                            initial={{ strokeDashoffset: circumference }}
+                            animate={{ strokeDashoffset: offset }}
+                            transition={{ duration: 1.5, ease: "easeOut" }}
+                            style={{ filter: `drop-shadow(0 0 8px ${color}50)` }}
+                        />
+                    )}
+                </svg>
+                <div className="absolute bottom-0 inset-x-0 flex flex-col items-center translate-y-3">
+                    <AnimatedNumber value={value} duration={1.5} suffix="%" colorClass={`text-4xl font-black tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`} />
+                </div>
+            </div>
+            <div className="mt-8 text-center">
+                <div className={`text-[11px] font-bold uppercase tracking-widest ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>{label}</div>
+                {subtitle && <div className={`text-[10px] mt-1 font-medium ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>{subtitle}</div>}
+            </div>
+        </div>
+    );
+};
+
+const DataFlowSankey = ({ stats, color, isDarkMode, targetColumn }) => {
+    const { patients, missing, missingPct } = stats;
+    const validCount = patients - (patients * missingPct / 100);
+    
+    return (
+        <div className="relative w-full h-[260px] flex items-center justify-center">
+             {/* Simple visual connection paths */}
+             <svg className="absolute inset-0 w-full h-full" preserveAspectRatio="none" viewBox="0 0 400 260">
+                  <motion.path 
+                      d="M 90 130 C 220 130, 240 70, 320 70" 
+                      fill="none" stroke="url(#validFlow)" strokeWidth="44" opacity="0.8" 
+                      initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 1.5 }}
+                      strokeLinecap="round"
+                  />
+                  {missingPct > 0 && (
+                      <motion.path 
+                          d="M 90 130 C 220 130, 240 190, 320 190" 
+                          fill="none" stroke="url(#missingFlow)" strokeWidth="24" opacity="0.8"
+                          initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 1.5, delay: 0.2 }}
+                          strokeLinecap="round"
+                      />
+                  )}
+                  <defs>
+                      <linearGradient id="validFlow" x1="0" y1="0" x2="1" y2="0">
+                          <stop offset="0%" stopColor="#facc15" />
+                          <stop offset="100%" stopColor={color} />
+                      </linearGradient>
+                      <linearGradient id="missingFlow" x1="0" y1="0" x2="1" y2="0">
+                          <stop offset="0%" stopColor="#facc15" />
+                          <stop offset="100%" stopColor="#ef4444" />
+                      </linearGradient>
+                  </defs>
+             </svg>
+
+             {/* Source Node */}
+             <motion.div 
+                 className="absolute left-[10px] md:left-[30px] top-[95px] w-28"
+                 initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5 }}
+             >
+                  <div className={`p-4 rounded-3xl shadow-xl border text-center ${isDarkMode ? 'bg-slate-900 border-slate-700/50' : 'bg-white border-slate-100'}`}>
+                      <div className="text-3xl font-black" style={{ color: '#facc15' }}>
+                          <AnimatedNumber value={patients || 0} isDarkMode={isDarkMode} colorClass="" />
+                      </div>
+                      <div className={`text-[9px] uppercase tracking-wider font-bold mt-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Total Rows</div>
+                  </div>
+             </motion.div>
+
+             {/* Target Node: Valid */}
+             <motion.div 
+                 className="absolute right-[10px] md:right-[30px] top-[30px] w-36"
+                 initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, delay: 0.4 }}
+             >
+                  <div className={`p-4 rounded-3xl shadow-xl border ${isDarkMode ? 'bg-slate-900 border-slate-700/50' : 'bg-white border-slate-100'}`}>
+                      <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
+                          <div className="text-sm font-black text-slate-900 dark:text-white">Valid Data</div>
+                      </div>
+                      <div className="text-xl font-bold mt-2" style={{ color: color }}>
+                          <AnimatedNumber value={validCount || 0} isDarkMode={isDarkMode} />
+                      </div>
+                      <div className={`text-[10px] font-medium mt-1 truncate ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>For: {targetColumn || 'Model'}</div>
+                  </div>
+             </motion.div>
+
+             {/* Target Node: Missing */}
+             <motion.div 
+                 className="absolute right-[10px] md:right-[30px] top-[148px] w-36"
+                 initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, delay: 0.6 }}
+             >
+                  <div className={`p-4 rounded-3xl shadow-xl border ${isDarkMode ? 'bg-slate-900 border-slate-700/50' : 'bg-white border-slate-100'}`}>
+                      <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-red-500" />
+                          <div className="text-sm font-black text-slate-900 dark:text-white">Missing Gaps</div>
+                      </div>
+                      <div className="text-xl font-bold text-red-500 mt-2">{missingPct || 0}%</div>
+                      <div className={`text-[10px] font-medium mt-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Will be imputed</div>
+                  </div>
+             </motion.div>
+        </div>
+    );
+};
+
+const PyramidBarChart = ({ classBalance, isDarkMode, primaryStr }) => {
+    const entries = Object.entries(classBalance);
+    if (entries.length === 0) return (
+       <div className={`h-full flex items-center justify-center text-sm ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+           No distribution available
+       </div>
+    );
+    
+    // Sort descending by count
+    const sorted = entries.sort((a,b) => b[1] - a[1]).slice(0, 7);
+    const max = Math.max(...sorted.map(e => e[1]));
+    
+    return (
+        <div className="flex flex-col justify-center gap-3 w-full h-full pt-2 pb-2">
+            {sorted.map(([label, count], i) => {
+                const pct = (count / max) * 100;
+                return (
+                    <div key={label} className="flex items-center gap-4 text-xs group">
+                        <div className={`w-24 text-right truncate font-bold ${isDarkMode ? 'text-slate-300 group-hover:text-white' : 'text-slate-600 group-hover:text-slate-900'} transition-colors`}>{label}</div>
+                        <div className="flex-1 flex items-center justify-center relative h-6">
+                            {/* Centered bar (like a pyramid) */}
+                            <div className="absolute inset-x-0 h-full flex justify-center items-center">
+                                <motion.div 
+                                    className="h-3 rounded-full"
+                                    initial={{ width: 0 }}
+                                    animate={{ width: `${pct}%` }}
+                                    transition={{ duration: 1, delay: i * 0.1, ease: 'easeOut' }}
+                                    style={{ background: `linear-gradient(90deg, ${primaryStr}40, ${primaryStr}, ${primaryStr}40)` }}
+                                />
+                            </div>
+                        </div>
+                        <div className={`w-12 text-left font-mono font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                            <AnimatedNumber value={count} duration={1} />
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
+    );
+};
 
 /* ═══════════════════════════════════════════════════════════════
    Main Component
@@ -348,6 +537,7 @@ const DataExploration = ({ isDarkMode, onNext, onPrev, domain, onPatientCountCha
     const [totalRowCount, setTotalRowCount] = useState(0);
     const [showGuide, setShowGuide] = useState(false);
     const [hoveredSection, setHoveredSection] = useState(null);
+    const [isManageDataOpen, setIsManageDataOpen] = useState(true);
 
     // Re-load when domain changes or user switches back to default dataset
     useEffect(() => {
@@ -694,23 +884,33 @@ const DataExploration = ({ isDarkMode, onNext, onPrev, domain, onPatientCountCha
 
     return (
         <motion.div variants={containerAnim} initial="hidden" animate="show" className="relative max-w-7xl mx-auto w-full">
-            {/* Background particles */}
             <FloatingParticles isDarkMode={isDarkMode} primaryStr={primaryStr} />
 
-            <div className="relative z-10 space-y-8">
-                {/* ═══════════════ HEADER ═══════════════ */}
-                <motion.div variants={itemAnim} className="mb-2">
-                    <motion.p 
-                        className="hero-subtitle" 
-                        initial={{ opacity: 0 }} 
-                        animate={{ opacity: 1 }}
-                        style={{ textAlign: 'center', marginBottom: 32 }}
+            <div className="relative z-10 space-y-6">
+                {/* Header */}
+                <motion.div variants={itemAnim} className="flex items-center justify-between mb-8">
+                    <div>
+                        <motion.h1 
+                            className="text-3xl font-black tracking-tight"
+                            style={{ color: isDarkMode ? '#fff' : '#0f172a' }}
+                        >
+                            Data Profile Dashboard
+                        </motion.h1>
+                        <p className={`mt-1 text-sm font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                            Dataset metrics, health checks, and demographics
+                        </p>
+                    </div>
+
+                    <button 
+                        onClick={() => setIsManageDataOpen(!isManageDataOpen)}
+                        className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all ${isManageDataOpen ? (isDarkMode ? 'bg-slate-800 text-slate-300' : 'bg-slate-200 text-slate-600') : (isDarkMode ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-slate-900 text-white hover:bg-slate-800')}`}
                     >
-                        Data Profile
-                    </motion.p>
+                        <Database className="w-4 h-4" />
+                        {isManageDataOpen ? 'Hide Data Source' : 'Manage Data'}
+                    </button>
                 </motion.div>
 
-                {/* ── BLOCKED BANNER ── */}
+                {/* Blocked Banner */}
                 <AnimatePresence>
                     {showBlockedBanner && !isMapped && (
                         <motion.div
@@ -724,527 +924,197 @@ const DataExploration = ({ isDarkMode, onNext, onPrev, domain, onPatientCountCha
                         >
                             <XCircle className="w-5 h-5 shrink-0 mt-0.5 text-red-500" />
                             <div className="flex-1">
-                                <h4 className={`font-semibold text-sm mb-0.5 ${isDarkMode ? 'text-red-400' : 'text-red-800'}`}>Step 3 is Blocked</h4>
-                                <p className="text-sm">
-                                    Open the <strong>Column Mapper</strong>, validate, and <strong>save</strong> before continuing.
-                                </p>
+                                <h4 className={`font-semibold text-sm mb-0.5 ${isDarkMode ? 'text-red-400' : 'text-red-800'}`}>Dataset Needs Validation</h4>
+                                <p className="text-sm">Verify your target outcome and continue via the column mapper.</p>
                                 <button
                                     onClick={() => setIsMapperOpen(true)}
                                     className={`mt-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${isDarkMode
                                         ? 'bg-red-500/15 text-red-300 hover:bg-red-500/25'
                                         : 'bg-red-100 text-red-700 hover:bg-red-200'}`}
                                 >
-                                    Open Column Mapper →
+                                    Validate Now →
                                 </button>
                             </div>
                         </motion.div>
                     )}
                 </AnimatePresence>
 
-                {/* ── Upload Error ── */}
+                {/* Upload Error */}
                 <AnimatePresence>
                     {uploadError && (
                         <motion.div
                             initial={{ opacity: 0, y: -10 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -10 }}
-                            className={`p-4 rounded-2xl flex items-start gap-3 ${isDarkMode
-                                ? 'bg-red-950/40 text-red-200'
-                                : 'bg-red-50 text-red-700'}`}
+                            className={`p-4 rounded-2xl flex items-start gap-3 ${isDarkMode ? 'bg-red-950/40 text-red-200' : 'bg-red-50 text-red-700'}`}
                         >
-                            <FileWarning className={`w-5 h-5 flex-shrink-0 mt-0.5 ${isDarkMode ? 'text-red-400' : 'text-red-500'}`} />
+                            <FileWarning className="w-5 h-5 flex-shrink-0 mt-0.5 text-red-500" />
                             <div className="flex-1 text-sm">{uploadError}</div>
-                            <button onClick={() => setUploadError('')} className="shrink-0 p-1 rounded-full opacity-60 hover:opacity-100 transition-opacity">
-                                <XCircle className="w-4 h-4" />
+                            <button onClick={() => setUploadError('')}>
+                                <XCircle className="w-4 h-4 opacity-60 hover:opacity-100" />
                             </button>
                         </motion.div>
                     )}
                 </AnimatePresence>
 
-                {/* ═══════════════ BENTO GRID LAYOUT ═══════════════ */}
-
-                {/* ── Section 1: Data Source — two-column bento ── */}
-                <motion.section variants={itemAnim}>
-                    <div className="flex items-center gap-3 mb-6">
-                        <div className={'w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold ' + (isDarkMode ? 'bg-white/[0.06] text-slate-400' : 'bg-slate-100 text-slate-500')}>1</div>
-                        <h2 className={'text-lg font-bold ' + (isDarkMode ? 'text-slate-100' : 'text-slate-900')}>Data Source</h2>
-                        <div className={'flex-1 h-px ' + (isDarkMode ? 'bg-slate-800' : 'bg-slate-200')} />
-                    </div>
-
-                    <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-                        {/* Left: Source toggle + upload — 3 cols */}
-                        <motion.div
-                            className={'lg:col-span-3 rounded-3xl p-6 transition-all duration-300 overflow-hidden relative ' + (isDarkMode
-                                ? 'bg-white/[0.02] border border-white/[0.06] hover:border-white/[0.1]'
-                                : 'bg-white border border-slate-200 shadow-sm')}
-                            onMouseEnter={() => setHoveredSection('source')}
-                            onMouseLeave={() => setHoveredSection(null)}
+                {/* Data Source Panel (Collapsible) */}
+                <AnimatePresence>
+                    {isManageDataOpen && (
+                        <motion.div 
+                            initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+                            animate={{ opacity: 1, height: 'auto', marginBottom: 32 }}
+                            exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                            className="overflow-hidden"
                         >
-                            {/* Subtle glow on hover */}
-                            <AnimatePresence>
-                                {hoveredSection === 'source' && (
-                                    <motion.div
-                                        initial={{ opacity: 0 }}
-                                        animate={{ opacity: 1 }}
-                                        exit={{ opacity: 0 }}
-                                        className="absolute inset-0 pointer-events-none"
-                                        style={{ background: `radial-gradient(circle at 50% 0%, ${primaryStr}08, transparent 70%)` }}
-                                    />
-                                )}
-                            </AnimatePresence>
-
-                            <div className="relative z-10 space-y-5">
-                                {/* Toggle pill */}
-                                <div className={'inline-flex p-1 rounded-2xl ' + (isDarkMode ? 'bg-slate-800/80' : 'bg-slate-50')}>
-                                    <motion.button
-                                        onClick={() => setUseDefaultDataset(true)}
-                                        whileTap={{ scale: 0.97 }}
-                                        className={'px-5 py-2.5 text-xs font-semibold rounded-xl transition-all duration-300 ' + (useDefaultDataset
-                                            ? (isDarkMode ? 'bg-slate-700 text-white shadow-lg shadow-slate-900/50' : 'bg-white text-slate-900 shadow-md')
-                                            : (isDarkMode ? 'text-slate-500 hover:text-slate-300' : 'text-slate-400 hover:text-slate-600'))}
-                                    >
-                                        <span className="flex items-center gap-2">
-                                            <Database className="w-3.5 h-3.5" />
-                                            {useDefaultDataset && isLoading ? 'Loading…' : 'Default Dataset'}
-                                        </span>
-                                    </motion.button>
-                                    <motion.button
-                                        onClick={() => setUseDefaultDataset(false)}
-                                        whileTap={{ scale: 0.97 }}
-                                        className={'px-5 py-2.5 text-xs font-semibold rounded-xl transition-all duration-300 ' + (!useDefaultDataset
-                                            ? (isDarkMode ? 'bg-slate-700 text-white shadow-lg shadow-slate-900/50' : 'bg-white text-slate-900 shadow-md')
-                                            : (isDarkMode ? 'text-slate-500 hover:text-slate-300' : 'text-slate-400 hover:text-slate-600'))}
-                                    >
-                                        <span className="flex items-center gap-2">
-                                            <Upload className="w-3.5 h-3.5" />
-                                            Upload CSV
-                                        </span>
-                                    </motion.button>
-                                </div>
-
-                                {/* Data size toggle */}
-                                <AnimatePresence mode="wait">
-                                    {useDefaultDataset ? (
-                                        <motion.div
-                                            key="default-opts"
-                                            initial={{ opacity: 0, height: 0 }}
-                                            animate={{ opacity: 1, height: 'auto' }}
-                                            exit={{ opacity: 0, height: 0 }}
-                                            transition={{ duration: 0.3 }}
-                                            className={'p-4 rounded-2xl ' + (isDarkMode ? 'bg-slate-800/40' : 'bg-slate-50/80')}
-                                        >
-                                            <div className={'text-[9px] font-bold uppercase tracking-[0.2em] mb-3 ' + (isDarkMode ? 'text-slate-500' : 'text-slate-400')}>Sample Size</div>
-                                            <div className={'inline-flex p-0.5 rounded-xl ' + (isDarkMode ? 'bg-slate-900/80' : 'bg-slate-200/50')}>
-                                                <button
-                                                    onClick={() => setDataMode('default')}
-                                                    className={'px-4 py-1.5 text-[11px] font-medium rounded-lg transition-all duration-200 ' + (dataMode === 'default'
-                                                        ? (isDarkMode ? 'bg-slate-700 text-white shadow-sm' : 'bg-white text-slate-800 shadow-sm')
-                                                        : (isDarkMode ? 'text-slate-500' : 'text-slate-500'))}
-                                                >
-                                                    Max 1,000
-                                                </button>
-                                                <button
-                                                    onClick={() => setDataMode('all')}
-                                                    className={'px-4 py-1.5 text-[11px] font-medium rounded-lg transition-all duration-200 ' + (dataMode === 'all'
-                                                        ? (isDarkMode ? 'bg-slate-700 text-white shadow-sm' : 'bg-white text-slate-800 shadow-sm')
-                                                        : (isDarkMode ? 'text-slate-500' : 'text-slate-500'))}
-                                                >
-                                                    All Data
-                                                </button>
-                                            </div>
-                                            {totalRowCount > 1000 && (
-                                                <motion.p
-                                                    initial={{ opacity: 0 }}
-                                                    animate={{ opacity: 1 }}
-                                                    className={'text-[10px] mt-2 ' + (isDarkMode ? 'text-slate-600' : 'text-slate-400')}
-                                                >
-                                                    {dataMode === 'default'
-                                                        ? `Stratified sample · 1,000 of ${totalRowCount.toLocaleString()} rows`
-                                                        : `Using all ${totalRowCount.toLocaleString()} rows`}
-                                                </motion.p>
-                                            )}
-                                        </motion.div>
-                                    ) : (
-                                        <motion.div
-                                            key="upload-zone"
-                                            initial={{ opacity: 0, height: 0 }}
-                                            animate={{ opacity: 1, height: 'auto' }}
-                                            exit={{ opacity: 0, height: 0 }}
-                                            transition={{ duration: 0.3 }}
-                                            className="space-y-3"
-                                        >
-                                            <label
-                                                className={'relative rounded-2xl min-h-[140px] flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-500 overflow-hidden ' + (isDarkMode
-                                                    ? `${isDragging ? 'bg-slate-800 scale-[1.005]' : 'bg-slate-800/30 hover:bg-slate-800/50'}`
-                                                    : `${isDragging ? 'bg-indigo-50/50 scale-[1.005]' : 'bg-slate-50/50 hover:bg-slate-100/60'}`)}
-                                                style={{
-                                                    border: isDragging ? `2px dashed ${primaryStr}` : `1.5px dashed ${isDarkMode ? '#1e293b' : '#e2e8f0'}`,
-                                                }}
-                                                onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-                                                onDragLeave={() => setIsDragging(false)}
-                                                onDrop={(e) => { e.preventDefault(); setIsDragging(false); handleFileUpload(e); }}
-                                            >
-                                                <input
-                                                    type="file"
-                                                    accept=".csv"
-                                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                                    onChange={handleFileUpload}
-                                                />
-                                                {isLoading ? (
-                                                    <div className="flex flex-col items-center gap-2.5 py-4">
-                                                        <motion.div
-                                                            animate={{ rotate: 360 }}
-                                                            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                                                            className={'w-8 h-8 rounded-full border-2 border-t-transparent ' + (isDarkMode ? 'border-slate-700' : 'border-slate-300')}
-                                                            style={{ borderTopColor: primaryStr }}
-                                                        />
-                                                        <p className={'text-xs font-medium ' + (isDarkMode ? 'text-slate-500' : 'text-slate-400')}>Parsing…</p>
-                                                    </div>
-                                                ) : uploadSuccess && uploadedFileName ? (
-                                                    <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="flex flex-col items-center gap-1.5 py-4">
-                                                        <motion.div
-                                                            initial={{ scale: 0 }}
-                                                            animate={{ scale: 1 }}
-                                                            transition={{ type: 'spring', stiffness: 400, damping: 15 }}
-                                                            className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center"
-                                                        >
-                                                            <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-                                                        </motion.div>
-                                                        <p className={'text-sm font-semibold ' + (isDarkMode ? 'text-slate-200' : 'text-slate-700')}>{uploadedFileName}</p>
-                                                        <p className={'text-[10px] ' + (isDarkMode ? 'text-emerald-400/70' : 'text-emerald-600/70')}>{uploadedFileSize} · Ready</p>
-                                                    </motion.div>
-                                                ) : (
-                                                    <div className="flex flex-col items-center gap-2 py-6">
-                                                        <motion.div
-                                                            animate={{ y: [0, -4, 0] }}
-                                                            transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-                                                        >
-                                                            <Upload className={'w-6 h-6 ' + (isDarkMode ? 'text-slate-600' : 'text-slate-300')} strokeWidth={1.5} />
-                                                        </motion.div>
-                                                        <p className={'text-sm font-medium ' + (isDarkMode ? 'text-slate-400' : 'text-slate-500')}>Drop CSV here</p>
-                                                        <p className={'text-[10px] ' + (isDarkMode ? 'text-slate-600' : 'text-slate-400')}>or click · max 50 MB</p>
-                                                    </div>
-                                                )}
-                                            </label>
-
+                            <div className={`p-6 rounded-[32px] overflow-hidden relative ${isDarkMode ? 'bg-white/[0.02] border border-white/[0.06]' : 'bg-white border border-slate-200 shadow-sm'}`}>
+                                <h3 className={`text-xs font-bold uppercase tracking-widest mb-4 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Configure Data Source</h3>
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                    {/* Left: Source toggle + upload */}
+                                    <div className="space-y-4">
+                                        <div className={`inline-flex p-1 rounded-2xl ${isDarkMode ? 'bg-slate-900/60' : 'bg-white shadow-sm border border-slate-200'}`}>
                                             <button
-                                                onClick={() => setShowGuide(!showGuide)}
-                                                className={'w-full text-left flex items-center gap-1.5 text-[11px] font-medium px-1 py-1 transition-colors ' + (isDarkMode
-                                                    ? 'text-slate-500 hover:text-slate-400'
-                                                    : 'text-slate-400 hover:text-slate-500')}
+                                                onClick={() => setUseDefaultDataset(true)}
+                                                className={`px-5 py-2.5 text-xs font-bold rounded-xl transition-all ${useDefaultDataset ? (isDarkMode ? 'bg-slate-700 text-white' : 'bg-slate-100 text-slate-900') : 'text-slate-500 hover:text-slate-700'}`}
                                             >
-                                                <motion.span
-                                                    animate={{ rotate: showGuide ? 180 : 0 }}
-                                                    transition={{ duration: 0.2 }}
-                                                >
-                                                    <ChevronDown className="w-3 h-3" />
-                                                </motion.span>
-                                                CSV format guide
+                                                Default Dataset
                                             </button>
-                                            <AnimatePresence>
-                                                {showGuide && (
-                                                    <motion.div
-                                                        initial={{ opacity: 0, height: 0 }}
-                                                        animate={{ opacity: 1, height: 'auto' }}
-                                                        exit={{ opacity: 0, height: 0 }}
-                                                        transition={{ duration: 0.3 }}
-                                                        className={'p-3 rounded-xl text-xs space-y-1.5 ' + (isDarkMode
-                                                            ? 'bg-slate-800/50 text-slate-500'
-                                                            : 'bg-slate-50 text-slate-400')}
-                                                    >
-                                                        <p><strong className={isDarkMode ? 'text-slate-400' : 'text-slate-500'}>Row 1</strong> = headers</p>
-                                                        <p><strong className={isDarkMode ? 'text-slate-400' : 'text-slate-500'}>Last col</strong> = target variable</p>
-                                                        <div className={'mt-2 p-2 rounded-lg font-mono text-[10px] leading-relaxed ' + (isDarkMode ? 'bg-slate-900 text-slate-600' : 'bg-white text-slate-400')}>
-                                                            Age, BP, Chol, …, Outcome<br />
-                                                            65, 140, 220, …, 1
-                                                        </div>
-                                                    </motion.div>
-                                                )}
-                                            </AnimatePresence>
-                                            <p className={'text-[10px] px-1 ' + (isDarkMode ? 'text-slate-600' : 'text-slate-400')}>
-                                                Processed locally. Never stored.
-                                            </p>
-                                        </motion.div>
-                                    )}
-                                </AnimatePresence>
-                            </div>
-                        </motion.div>
-
-                        {/* Right: Target + Validate — 2 cols */}
-                        <motion.div
-                            className={'lg:col-span-2 rounded-3xl p-6 transition-all duration-300 relative overflow-hidden ' + (isDarkMode
-                                ? 'bg-white/[0.02] border border-white/[0.06] hover:border-white/[0.1]'
-                                : 'bg-white border border-slate-200 shadow-sm')}
-                            onMouseEnter={() => setHoveredSection('target')}
-                            onMouseLeave={() => setHoveredSection(null)}
-                        >
-                            <AnimatePresence>
-                                {hoveredSection === 'target' && (
-                                    <motion.div
-                                        initial={{ opacity: 0 }}
-                                        animate={{ opacity: 1 }}
-                                        exit={{ opacity: 0 }}
-                                        className="absolute inset-0 pointer-events-none"
-                                        style={{ background: `radial-gradient(circle at 80% 20%, ${secondaryStr}08, transparent 70%)` }}
-                                    />
-                                )}
-                            </AnimatePresence>
-
-                            <div className="relative z-10 space-y-5">
-                                <div className="flex items-center gap-2 mb-1">
-                                    <Target className="w-4 h-4" style={{ color: primaryStr }} />
-                                    <label className={'text-[10px] font-bold uppercase tracking-[0.18em] ' + (isDarkMode ? 'text-slate-400' : 'text-slate-500')}>
-                                        Target Outcome
-                                    </label>
-                                </div>
-                                <div className="relative">
-                                    <select
-                                        value={targetColumn}
-                                        onChange={(e) => {
-                                            const newTarget = e.target.value;
-                                            setTargetColumn(newTarget);
-                                            setMapperColumns(prev => prev.map(col => ({
-                                                ...col,
-                                                isTarget: col.name === newTarget
-                                            })));
-                                        }}
-                                        className={'w-full p-3.5 pr-10 rounded-2xl appearance-none border-0 outline-none text-sm font-medium transition-all duration-200 ' + (isDarkMode
-                                            ? 'bg-slate-800/60 text-white hover:bg-slate-800 focus:ring-2 focus:ring-indigo-500/30'
-                                            : 'bg-slate-50 text-slate-900 hover:bg-slate-100 focus:ring-2 focus:ring-indigo-500/20')}
-                                    >
-                                        {measurements.map(m => (
-                                            <option key={m.name} value={m.name}>
-                                                {formatColumnName(m.name)}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    <div className="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none">
-                                        <ChevronDown className={'w-4 h-4 ' + (isDarkMode ? 'text-slate-600' : 'text-slate-300')} />
+                                            <button
+                                                onClick={() => setUseDefaultDataset(false)}
+                                                className={`px-5 py-2.5 text-xs font-bold rounded-xl transition-all ${!useDefaultDataset ? (isDarkMode ? 'bg-slate-700 text-white' : 'bg-slate-100 text-slate-900') : 'text-slate-500 hover:text-slate-700'}`}
+                                            >
+                                                Upload CSV
+                                            </button>
+                                        </div>
+                                        {/* Upload area or default hint here... */}
+                                        {!useDefaultDataset && (
+                                            <label className={`relative w-full rounded-2xl h-24 flex flex-col items-center justify-center cursor-pointer border-2 border-dashed transition-all ${isDarkMode ? 'bg-slate-900 text-slate-400 border-slate-700 hover:bg-slate-800' : 'bg-white text-slate-500 border-slate-300 hover:bg-slate-50'}`}>
+                                                <input type="file" accept=".csv" className="hidden" onChange={handleFileUpload} />
+                                                {isLoading ? 'Parsing...' : uploadedFileName ? <span className="font-semibold text-emerald-500">{uploadedFileName} uploaded</span> : <div className="flex items-center gap-2"><Upload size={16}/><span>Drop CSV here or click</span></div>}
+                                            </label>
+                                        )}
+                                        {useDefaultDataset && (
+                                            <div className={`p-4 rounded-xl text-sm ${isDarkMode ? 'bg-slate-900 text-slate-400' : 'bg-white text-slate-500'}`}>
+                                                Using default clinical dataset for {domain?.name}. Data is automatically sampled to 1,000 rows for optimal performance.
+                                            </div>
+                                        )}
+                                    </div>
+                                    
+                                    {/* Right: Target Config */}
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className={`text-[10px] font-bold uppercase tracking-[0.18em] mb-2 block ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Target Outcome</label>
+                                            <select
+                                                value={targetColumn}
+                                                onChange={(e) => {
+                                                    const newTarget = e.target.value;
+                                                    setTargetColumn(newTarget);
+                                                    setMapperColumns(prev => prev.map(col => ({ ...col, isTarget: col.name === newTarget })));
+                                                }}
+                                                className={`w-full p-3.5 rounded-2xl appearance-none outline-none text-sm font-bold ${isDarkMode ? 'bg-slate-900 text-white border border-slate-700' : 'bg-white text-slate-900 border border-slate-300'}`}
+                                            >
+                                                {measurements.map(m => <option key={m.name} value={m.name}>{formatColumnName(m.name)}</option>)}
+                                            </select>
+                                        </div>
+                                        <button
+                                            onClick={() => setIsMapperOpen(true)}
+                                            className={`w-full flex items-center justify-center gap-2.5 py-3.5 rounded-2xl text-sm font-bold transition-all ${isMapped ? (isDarkMode ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-100 text-emerald-700') : (isDarkMode ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-slate-900 text-white hover:bg-slate-800')}`}
+                                        >
+                                            {isMapped ? <><CheckCircle2 className="w-5 h-5"/> Schema Validated</> : <><Shield className="w-5 h-5"/> Validate Dataset Columns</>}
+                                        </button>
                                     </div>
                                 </div>
-                                <p className={'text-[10px] px-1 ' + (isDarkMode ? 'text-slate-600' : 'text-slate-400')}>
-                                    The outcome the model will predict.
-                                </p>
-
-                                {/* Validate Button */}
-                                <motion.button
-                                    onClick={() => setIsMapperOpen(true)}
-                                    whileHover={{ scale: 1.01 }}
-                                    whileTap={{ scale: 0.98 }}
-                                    className={'w-full flex items-center justify-center gap-2.5 py-4 rounded-2xl text-sm font-semibold transition-all duration-300 ' + (
-                                        isMapped
-                                            ? ''
-                                            : (isDarkMode
-                                                ? 'bg-white/[0.06] text-slate-200 hover:bg-white/[0.1]'
-                                                : 'bg-slate-900 text-white hover:bg-slate-800')
-                                    )}
-                                    style={isMapped ? {
-                                        backgroundColor: isDarkMode ? 'rgba(16,185,129,0.08)' : 'rgba(16,185,129,0.06)',
-                                        color: secondaryStr,
-                                    } : {}}
-                                >
-                                    {isMapped ? (
-                                        <>
-                                            <motion.div
-                                                initial={{ scale: 0, rotate: -180 }}
-                                                animate={{ scale: 1, rotate: 0 }}
-                                                transition={{ type: 'spring', stiffness: 400, damping: 15 }}
-                                            >
-                                                <CheckCircle2 className="w-4 h-4" />
-                                            </motion.div>
-                                            Schema Validated
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Shield className="w-4 h-4" />
-                                            Validate Columns
-                                        </>
-                                    )}
-                                </motion.button>
-
-                                <AnimatePresence mode="wait">
-                                    {!isMapped && totalRowCount > 0 && (
-                                        <motion.p
-                                            initial={{ opacity: 0, y: 5 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            exit={{ opacity: 0, y: -5 }}
-                                            className={'text-[11px] px-1 flex items-center gap-1.5 ' + (isDarkMode ? 'text-amber-400/60' : 'text-amber-600/60')}
-                                        >
-                                            <AlertCircle className="w-3 h-3 shrink-0" />
-                                            Required before Step 3
-                                        </motion.p>
-                                    )}
-                                    {isMapped && (
-                                        <motion.p
-                                            initial={{ opacity: 0, y: 5 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            exit={{ opacity: 0, y: -5 }}
-                                            className={'text-[11px] px-1 flex items-center gap-1.5 ' + (isDarkMode ? 'text-emerald-400/60' : 'text-emerald-600/60')}
-                                        >
-                                            <CheckCircle2 className="w-3 h-3 shrink-0" />
-                                            Ready for Step 3
-                                        </motion.p>
-                                    )}
-                                </AnimatePresence>
                             </div>
                         </motion.div>
-                    </div>
-                </motion.section>
+                    )}
+                </AnimatePresence>
 
-                {/* ═══════════════ Section 2: DATASET OVERVIEW ═══════════════ */}
-                <motion.section variants={itemAnim}>
-                    <div className="flex items-center gap-3 mb-6">
-                        <div className={'w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold ' + (isDarkMode ? 'bg-white/[0.06] text-slate-400' : 'bg-slate-100 text-slate-500')}>2</div>
-                        <h2 className={'text-lg font-bold ' + (isDarkMode ? 'text-slate-100' : 'text-slate-900')}>Dataset Overview</h2>
-                        <div className={'flex-1 h-px ' + (isDarkMode ? 'bg-slate-800' : 'bg-slate-200')} />
-                    </div>
+                {/* Top Metrics Grid */}
+                <motion.div variants={itemAnim} className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <DashboardStatCard
+                        value={stats.patients}
+                        label="Patient Records"
+                        subtitle="Total volume of clinical data"
+                        icon={Users}
+                        isDarkMode={isDarkMode}
+                        delay={0.1}
+                        color={primaryStr}
+                    />
+                    <DashboardStatCard
+                        value={stats.measurements}
+                        label="Available Features"
+                        subtitle="Clinical variables per patient"
+                        icon={LayoutTemplate}
+                        isDarkMode={isDarkMode}
+                        delay={0.2}
+                        color={secondaryStr}
+                    />
+                    <DashboardStatCard
+                        value={100 - parseFloat(stats.missing || '0')}
+                        label="Data Completeness"
+                        subtitle="Percentage without missing values"
+                        icon={ActivitySquare}
+                        isDarkMode={isDarkMode}
+                        delay={0.3}
+                        color={parseFloat(stats.missing || '0') < 5 ? '#10b981' : '#f59e0b'}
+                        suffix="%"
+                    />
+                </motion.div>
 
-                    {/* ── Stat Cards — iOS Grid ── */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 32 }}>
-                        <StatCard
-                            value={stats.patients}
-                            label="Patients Total"
-                            icon={Layers}
-                            isDarkMode={isDarkMode}
-                            delay={0.1}
-                            color={primaryStr}
-                            type="patients"
-                        />
-                        <StatCard
-                            value={stats.measurements}
-                            label="Clinical Features"
-                            icon={BarChart3}
-                            isDarkMode={isDarkMode}
-                            delay={0.2}
-                            color={secondaryStr}
-                            type="features"
-                        />
-                        <StatCard
-                            value={stats.missing}
-                            label="Missing Gaps"
-                            icon={AlertTriangle}
-                            isDarkMode={isDarkMode}
-                            delay={0.3}
-                            color={missingColor}
-                            type="missing"
-                        />
-                    </div>
-
-                    {/* ── Class Balance ── */}
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.5, delay: 0.4 }}
-                        className={'rounded-3xl p-6 mb-8 transition-all duration-300 ' + (isDarkMode
-                            ? 'bg-white/[0.02] border border-white/[0.06]'
-                            : 'bg-emerald-50/40 border border-emerald-100 shadow-md')}
-                    >
-                        <div className="flex items-center justify-between mb-6">
-                            <div className="flex items-center gap-2">
-                                <BarChart3 className="w-4 h-4" style={{ color: primaryStr }} />
-                                <h3 className={'text-[10px] font-bold uppercase tracking-[0.2em] ' + (isDarkMode ? 'text-slate-400' : 'text-slate-500')}>
-                                    Outcome Distribution — {targetColumn ? formatColumnName(targetColumn) : '…'}
-                                </h3>
-                            </div>
-                            
-                            {/* Substituted Imbalance Warning Tooltip */}
-                            {(() => {
-                                if (Object.keys(classBalance).length === 0) return null;
-                                const total = Object.values(classBalance).reduce((a, b) => a + b, 0);
-                                const maxCount = Math.max(...Object.values(classBalance));
-                                const majorityPct = total > 0 ? Math.round((maxCount / total) * 100) : 0;
-                                if (majorityPct > 60) {
-                                    return (
-                                        <Tooltip 
-                                            content={<span><strong className="text-amber-500">Imbalance detected:</strong> The majority class makes up {majorityPct}% of the data. We will handle it in Step 3.</span>}
-                                            isDarkMode={isDarkMode} 
-                                            position="left" 
-                                            noUnderline 
-                                            className="flex items-center"
-                                        >
-                                            <div className="flex items-center gap-1.5 px-2 py-1 rounded-full cursor-help transition-colors bg-amber-500/10 text-amber-500 hover:bg-amber-500/20">
-                                                <AlertTriangle className="w-3.5 h-3.5" />
-                                                <span className="text-[10px] font-bold uppercase tracking-wider">Imbalanced Data</span>
-                                            </div>
-                                        </Tooltip>
-                                    );
-                                }
-                                return null;
-                            })()}
+                {/* Complex Charts Grid */}
+                <motion.div variants={itemAnim} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* Left/Middle: Flow/Sankey (takes up 2 cols) */}
+                    <div className={`lg:col-span-2 p-6 rounded-[32px] overflow-hidden relative ${isDarkMode ? 'bg-white/[0.02] border border-white/[0.06]' : 'bg-white border border-slate-200 shadow-sm'}`}>
+                        <div className="flex items-center gap-2 mb-2">
+                             <Layers className="w-5 h-5" style={{ color: primaryStr }} />
+                             <h3 className={`text-[11px] font-bold uppercase tracking-widest ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Dataset Composition Architecture</h3>
                         </div>
-                        <ClassBalanceChart classBalance={classBalance} isLoading={isLoading} isDarkMode={isDarkMode} primaryStr={primaryStr} />
-                    </motion.div>
+                        <DataFlowSankey 
+                            stats={{ patients: stats.patients, missing: parseFloat(stats.missing || '0'), missingPct: parseFloat(stats.missing || '0') }} 
+                            color={primaryStr} 
+                            isDarkMode={isDarkMode} 
+                            targetColumn={formatColumnName(targetColumn)} 
+                        />
+                    </div>
 
-                    {/* ── Measurement Tile Grid ── */}
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.5, delay: 0.5 }}
-                    >
-                        <div className="flex items-center justify-between mb-5">
-                            <div className="flex items-center gap-2">
-                                <Layers className="w-4 h-4" style={{ color: primaryStr }} />
-                                <h3 className={'text-[10px] font-bold uppercase tracking-[0.2em] ' + (isDarkMode ? 'text-slate-400' : 'text-slate-500')}>
-                                    Patient Measurements · {measurements.length}
-                                </h3>
-                            </div>
-                            {/* Mini legend */}
-                            <div className="flex items-center gap-4">
-                                {readyCount > 0 && (
-                                    <span className={'flex items-center gap-1.5 text-[10px] font-medium ' + (isDarkMode ? 'text-slate-500' : 'text-slate-400')}>
-                                        <span className="w-2 h-2 rounded-full bg-emerald-400" /> {readyCount} ready
-                                    </span>
-                                )}
-                                {warningCount > 0 && (
-                                    <span className={'flex items-center gap-1.5 text-[10px] font-medium ' + (isDarkMode ? 'text-slate-500' : 'text-slate-400')}>
-                                        <span className="w-2 h-2 rounded-full bg-amber-400" /> {warningCount} gaps
-                                    </span>
-                                )}
-                                {excludeCount > 0 && (
-                                    <span className={'flex items-center gap-1.5 text-[10px] font-medium ' + (isDarkMode ? 'text-slate-500' : 'text-slate-400')}>
-                                        <span className="w-2 h-2 rounded-full bg-red-400" /> {excludeCount} excluded
-                                    </span>
-                                )}
-                            </div>
+                    {/* Right: Class Pyramid & Gauge Stack */}
+                    <div className="flex flex-col gap-6">
+                        {/* Target Distribution Pyramid */}
+                        <div className={`flex-1 p-6 rounded-[32px] overflow-hidden relative ${isDarkMode ? 'bg-white/[0.02] border border-white/[0.06]' : 'bg-white border border-slate-200 shadow-sm'}`}>
+                            <h3 className={`text-[11px] font-bold uppercase tracking-widest text-center mb-6 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Target Class Distribution</h3>
+                            <PyramidBarChart classBalance={classBalance} isDarkMode={isDarkMode} primaryStr={primaryStr} />
                         </div>
-                        <div className="flex flex-wrap justify-center gap-3">
-                            {measurements.map((item, i) => (
-                                <MeasurementCard
-                                    key={item.name}
-                                    item={item}
-                                    index={i}
-                                    isTarget={item.name === targetColumn}
-                                    isDarkMode={isDarkMode}
-                                    primaryStr={primaryStr}
-                                    formatColumnName={formatColumnName}
-                                />
-                            ))}
+
+                        {/* Data Quality Gauge */}
+                        <div className={`p-6 py-8 rounded-[32px] overflow-hidden relative ${isDarkMode ? 'bg-white/[0.02] border border-white/[0.06]' : 'bg-white border border-slate-200 shadow-sm'}`}>
+                            <GaugeChart 
+                                value={100 - parseFloat(stats.missing || '0')} 
+                                label="Data Readiness Score"
+                                subtitle={parseFloat(stats.missing || '0') === 0 ? "Perfect Quality" : "Imputation required for missing data"}
+                                color={parseFloat(stats.missing || '0') < 5 ? '#10b981' : '#f59e0b'}
+                                isDarkMode={isDarkMode}
+                            />
                         </div>
-                    </motion.div>
-                </motion.section>
+                    </div>
+                </motion.div>
 
                 {/* Bottom Navigation */}
-                <motion.div variants={itemAnim} className={`flex justify-between items-center pt-8 border-t ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
+                <motion.div variants={itemAnim} className={`flex justify-between items-center pt-8 mt-8 border-t ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
                     <motion.button
                         onClick={onPrev}
                         whileHover={{ x: -3 }}
                         whileTap={{ scale: 0.97 }}
-                        className={'px-5 py-2.5 rounded-xl text-sm font-medium transition-colors ' + (isDarkMode
-                            ? 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/50'
-                            : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50')}
+                        className={`px-6 py-3 rounded-2xl text-sm font-semibold transition-colors ${isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`}
                     >
-                        ← Previous
+                        ← Back to Context
                     </motion.button>
                     <motion.button
                         onClick={handleNextClick}
                         whileHover={{ scale: 1.02, x: 3 }}
                         whileTap={{ scale: 0.97 }}
-                        className={'flex items-center gap-2 px-6 py-2.5 rounded-2xl text-sm font-semibold transition-all duration-300 ' + (isMapped
-                            ? 'text-white shadow-lg'
-                            : isDarkMode ? 'bg-slate-800 text-slate-500' : 'bg-slate-100 text-slate-400')}
-                        style={isMapped ? { backgroundColor: primaryStr, boxShadow: `0 8px 30px ${primaryStr}35` } : {}}
+                        className={`flex items-center gap-2 px-8 py-3 rounded-2xl text-sm font-bold transition-all duration-300 ${isMapped ? 'text-white shadow-xl' : isDarkMode ? 'bg-slate-800 text-slate-500' : 'bg-slate-100 text-slate-400'}`}
+                        style={isMapped ? { backgroundColor: primaryStr, boxShadow: `0 8px 30px ${primaryStr}40` } : {}}
                     >
-                        Continue <ArrowRight className="w-4 h-4" />
+                        Explore Data Preparation <ArrowRight className="w-4 h-4 ml-1" />
                     </motion.button>
                 </motion.div>
             </div>

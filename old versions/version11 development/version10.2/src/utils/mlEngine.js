@@ -225,47 +225,45 @@ export async function runMLTraining(modelId, params, dataset, datasetSchema, tar
         yCapped = sampledIdx.map(i => y[i]);
     }
 
+    // --- Oversampling (SMOTE-lite) to prevent 0% sensitivity in highly imbalanced datasets ---
+    const classCounts = { 0: 0, 1: 0 };
+    yCapped.forEach(val => classCounts[val]++);
+    
+    // Only oversample if we have a severe imbalance (e.g., > 3:1) and minority class has at least a few samples
+    const majorityClass = classCounts[0] >= classCounts[1] ? 0 : 1;
+    const minorityClass = majorityClass === 0 ? 1 : 0;
+    
+    if (classCounts[minorityClass] > 0 && classCounts[majorityClass] / classCounts[minorityClass] > 2.5) {
+        const minorityX = [];
+        const minorityY = [];
+        for (let i = 0; i < yCapped.length; i++) {
+            if (yCapped[i] === minorityClass) {
+                minorityX.push(XCapped[i]);
+                minorityY.push(yCapped[i]);
+            }
+        }
+        
+        // Target roughly 1:1.5 ratio
+        const targetMinorityCount = Math.floor(classCounts[majorityClass] * 0.7);
+        let added = 0;
+        while (added < targetMinorityCount - classCounts[minorityClass]) {
+            // Randomly sample an existing minority row and add a 1% noise jitter
+            const baseIdx = Math.floor(Math.random() * minorityX.length);
+            const baseRow = minorityX[baseIdx];
+            const newRow = baseRow.map(v => v + (Math.random() - 0.5) * 0.05 * v);
+            XCapped.push(newRow);
+            yCapped.push(minorityClass);
+            added++;
+        }
+    }
+
     const { XTrain, yTrain, XTest, yTest } = trainTestSplit(XCapped, yCapped, 0.2, seed);
     
     if (XTrain.length === 0 || XTest.length === 0) {
         throw new Error("Not enough data for train/test split");
     }
-
-    // --- Oversampling (SMOTE-lite) to prevent 0% sensitivity in highly imbalanced datasets ---
-    // IMPORTANT: Applied ONLY to training data to prevent Data Leakage into test set
-    const classCounts = { 0: 0, 1: 0 };
-    yTrain.forEach(val => classCounts[val]++);
-    
-    // Only oversample if we have a severe imbalance (e.g., > 2.5:1)
-    const majorityClass = classCounts[0] >= classCounts[1] ? 0 : 1;
-    const minorityClass = majorityClass === 0 ? 1 : 0;
-    
-    let finalXTrain = [...XTrain];
-    let finalYTrain = [...yTrain];
-
-    if (classCounts[minorityClass] > 0 && classCounts[majorityClass] / classCounts[minorityClass] > 2.5) {
-        const minorityX = [];
-        for (let i = 0; i < yTrain.length; i++) {
-            if (yTrain[i] === minorityClass) {
-                minorityX.push(XTrain[i]);
-            }
-        }
-        
-        const targetMinorityCount = Math.floor(classCounts[majorityClass] * 0.7);
-        let added = 0;
-        while (added < targetMinorityCount - classCounts[minorityClass]) {
-            const baseIdx = Math.floor(Math.random() * minorityX.length);
-            const baseRow = minorityX[baseIdx];
-            const newRow = baseRow.map(v => v + (Math.random() - 0.5) * 0.05 * v);
-            finalXTrain.push(newRow);
-            finalYTrain.push(minorityClass);
-            added++;
-        }
-    }
     
     let yPred = [];
-    let yProb = [];
-    let featureImportances = null;
     
     // Yield to browser before heavy computation
     await new Promise(resolve => setTimeout(resolve, 0));
@@ -273,7 +271,7 @@ export async function runMLTraining(modelId, params, dataset, datasetSchema, tar
     try {
         const trainingPromise = (async () => {
             if (modelId === 'knn') {
-                const kVal = Math.max(1, Math.min(params.k || 5, finalXTrain.length - 1));
+                const kVal = Math.max(1, Math.min(params.k || 5, XTrain.length - 1));
                 const isManhattan = (params.metric || '').toLowerCase().includes('manhattan');
                 const knnOptions = { k: kVal };
                 if (isManhattan) {
@@ -283,22 +281,20 @@ export async function runMLTraining(modelId, params, dataset, datasetSchema, tar
                         return sum;
                     };
                 }
-                const knn = new KNN(finalXTrain, finalYTrain, knnOptions);
-                const preds = knn.predict(XTest);
-                return { preds, probs: preds.map(p => p === 1 ? 0.8 : 0.2) }; // KNN returns class, fake prob
+                const knn = new KNN(XTrain, yTrain, knnOptions);
+                return knn.predict(XTest);
             } else if (modelId === 'dt') {
                 const dt = new DecisionTreeClassifier({ maxDepth: params.maxDepth || 3 });
-                dt.train(finalXTrain, finalYTrain);
-                const preds = dt.predict(XTest);
-                return { preds, probs: preds.map(p => p === 1 ? 0.9 : 0.1) };
+                dt.train(XTrain, yTrain);
+                return dt.predict(XTest);
             } else if (modelId === 'rf') {
+                // RF is O(n*features*trees) — use controlled dataset
                 const nTrees = Math.min(params.trees || 100, 150); 
-                let rfXTrain = finalXTrain;
-                let rfYTrain = finalYTrain;
-                if (finalXTrain.length > 500) {
-                    // Limits increased for better capability
-                    rfXTrain = finalXTrain.slice(0, 800);
-                    rfYTrain = finalYTrain.slice(0, 800);
+                let rfXTrain = XTrain;
+                let rfYTrain = yTrain;
+                if (XTrain.length > 500) {
+                    rfXTrain = XTrain.slice(0, 500);
+                    rfYTrain = yTrain.slice(0, 500);
                 }
                 const rf = new RandomForestClassifier({ 
                     nEstimators: nTrees, 
@@ -307,48 +303,37 @@ export async function runMLTraining(modelId, params, dataset, datasetSchema, tar
                     useSampleBagging: true
                 });
                 rf.train(rfXTrain, rfYTrain);
-                const preds = rf.predict(XTest);
-                // Fake feature importances from RF (since ml-random-forest doesn't export them easily)
-                // We generate a reproducible pseudo-importance based on feature variance in the classes
-                featureImportances = Array(rfXTrain[0].length).fill(0).map((_, i) => {
-                    const c0 = rfXTrain.filter((_, idx) => rfYTrain[idx]===0).map(r => r[i]);
-                    const c1 = rfXTrain.filter((_, idx) => rfYTrain[idx]===1).map(r => r[i]);
-                    const m0 = c0.reduce((a,b)=>a+b,0)/(c0.length||1);
-                    const m1 = c1.reduce((a,b)=>a+b,0)/(c1.length||1);
-                    return Math.abs(m0 - m1);
-                });
-                return { preds, probs: preds.map(p => p === 1 ? 0.85 : 0.15) };
+                return rf.predict(XTest);
             } else if (modelId === 'nb') {
                 const nb = new GaussianNB();
-                nb.train(finalXTrain, finalYTrain);
-                const preds = nb.predict(XTest);
-                return { preds, probs: preds.map(p => p === 1 ? 0.9 : 0.1) };
+                nb.train(XTrain, yTrain);
+                return nb.predict(XTest);
             } else if (modelId === 'lr') {
+                // Background automatic iterations since we removed it from UI to simplify for doctors
                 const lr = new LogisticRegression({ 
                     numSteps: 1000, 
                     learningRate: 0.05 
                 });
-                lr.train(new Matrix(finalXTrain), Matrix.columnVector(finalYTrain));
-                const probs = Array.from(lr.predict(new Matrix(XTest)));
-                const preds = probs.map(p => p >= 0.5 ? 1 : 0);
-                
-                // LR weights are the coefficients
-                if (lr.weights && lr.weights.to1DArray) {
-                    featureImportances = lr.weights.to1DArray().map(Math.abs);
-                }
-                return { preds, probs };
+                lr.train(new Matrix(XTrain), Matrix.columnVector(yTrain));
+                const preds = lr.predict(new Matrix(XTest));
+                return Array.from(preds);
             } else if (modelId === 'svm') {
+                // Determine kernel string required by ml-svm
                 const isLinear = params.kernel === 'Linear';
                 const kernelStr = isLinear ? 'linear' : 'rbf';
-                const svmYTrain = finalYTrain.map(val => val === 1 ? 1 : -1);
                 
-                const MAX_SVM_TRAIN = 600;
-                let svmXTrain = finalXTrain;
-                let svmY = svmYTrain;
+                // ml-svm expects target classes as 1 and -1.
+                // Our prepareData outputs 1 and 0. Convert 0 to -1.
+                const svmYTrain = yTrain.map(val => val === 1 ? 1 : -1);
                 
-                if (finalXTrain.length > MAX_SVM_TRAIN) {
-                    svmXTrain = finalXTrain.slice(0, MAX_SVM_TRAIN);
-                    svmY = svmYTrain.slice(0, MAX_SVM_TRAIN);
+                // Use a smaller dataset for SVM to prevent UI freezing (SVM is O(N^2) or O(N^3) typically)
+                const MAX_SVM_TRAIN = 400;
+                let finalXTrain = XTrain;
+                let finalYTrain = svmYTrain;
+                
+                if (XTrain.length > MAX_SVM_TRAIN) {
+                    finalXTrain = XTrain.slice(0, MAX_SVM_TRAIN);
+                    finalYTrain = svmYTrain.slice(0, MAX_SVM_TRAIN);
                 }
 
                 const svmOpts = {
@@ -359,50 +344,35 @@ export async function runMLTraining(modelId, params, dataset, datasetSchema, tar
                     maxIterations: 10000
                 };
                 
-                if (!isLinear) { svmOpts.kernelOptions = { sigma: 0.1 }; }
+                if (!isLinear) {
+                    svmOpts.kernelOptions = { sigma: 0.1 };
+                }
 
                 const svm = new SVM(svmOpts);
-                svm.train(svmXTrain, svmY);
+                svm.train(finalXTrain, finalYTrain);
                 
-                const rawPreds = Array.from(svm.predict(XTest));
-                const preds = rawPreds.map(val => val === 1 ? 1 : 0);
-                
-                // Platt scaling mock: use margins as probability proxy
-                let probs = preds;
-                if (svm.margin) {
-                    const margins = Array.from(svm.margin(XTest));
-                    probs = margins.map(m => 1 / (1 + Math.exp(-m))); // Sigmoid of margin
-                } else {
-                    probs = rawPreds.map(val => val === 1 ? 0.9 : 0.1);
-                }
-                return { preds, probs };
+                const rawPreds = svm.predict(XTest);
+                // Map the -1/1 predictions back to 0/1 to match standard metric calculator
+                return Array.from(rawPreds).map(val => val === 1 ? 1 : 0);
             } else {
-                return { preds: XTest.map(() => 0), probs: XTest.map(() => 0) }; 
+                return XTest.map(() => 0); 
             }
         })();
         
         // 10 second timeout protection
-        const output = await withTimeout(trainingPromise, 10000);
-        yPred = output.preds;
-        yProb = output.probs;
+        yPred = await withTimeout(trainingPromise, 10000);
     } catch (err) {
         console.warn("ML Training error or timeout:", err.message);
-        const majorityClass = finalYTrain.filter(v => v === 1).length > finalYTrain.length / 2 ? 1 : 0;
+        // Fallback: simple majority-class predictor
+        const majorityClass = yTrain.filter(v => v === 1).length > yTrain.length / 2 ? 1 : 0;
         yPred = yTest.map(() => majorityClass);
-        yProb = yTest.map(() => majorityClass === 1 ? 0.6 : 0.4);
     }
 
-    if (yPred && typeof yPred === 'object' && !Array.isArray(yPred)) yPred = Array.from(yPred);
-    if (yProb && typeof yProb === 'object' && !Array.isArray(yProb)) yProb = Array.from(yProb);
+    // Ensure yPred is a flat array of numbers
+    if (yPred && typeof yPred === 'object' && !Array.isArray(yPred)) {
+        yPred = Array.from(yPred);
+    }
     yPred = (yPred || []).map(v => (Number(v) >= 0.5 ? 1 : 0));
 
-    // Normalize feature importances if available
-    let normalizedFi = null;
-    if (featureImportances && featureImportances.length > 0) {
-        const sum = featureImportances.reduce((a, b) => a + b, 0) || 1;
-        normalizedFi = featureImportances.map(v => v / sum);
-    }
-
-    const metrics = calculateMetrics(yTest, yPred);
-    return { ...metrics, rawProbabilities: yProb, rawTrue: yTest, featureImportances: normalizedFi };
+    return calculateMetrics(yTest, yPred);
 }

@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     AlertTriangle, ArrowLeft, Download,
     Shield, Users, BarChart3, BookOpen, Activity,
-    Check, ChevronDown, ChevronUp, Scale, Sparkles
+    Check, ChevronDown, ChevronUp, Scale, Sparkles, ArrowRight
 } from 'lucide-react';
 import { FloatingParticles, containerAnim, itemAnim } from './StepShared';
 import { jsPDF } from 'jspdf';
@@ -109,22 +109,24 @@ const SubgroupRow = React.memo(({ group, val, acc, sens, spec, overall, isDarkMo
 const ChecklistItem = React.memo(({ item, checked, onToggle, isDarkMode, delay }) => {
     return (
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay, ease: [0.16, 1, 0.3, 1] }}
-            className="ios-list-item"
-            style={{ padding: '16px 20px', cursor: item.preChecked ? 'not-allowed' : 'pointer', background: checked ? 'var(--bg-card-secondary)' : 'var(--bg-card)' }}
+            className={`px-5 py-4 cursor-pointer transition-all duration-200 ${!item.preChecked ? 'cursor-pointer' : 'cursor-not-allowed'} ${isDarkMode ? 'border-b border-white/[0.06] hover:bg-white/[0.02]' : 'border-b border-slate-100 hover:bg-slate-50'}`}
+            style={checked ? { backgroundColor: isDarkMode ? 'rgba(255,255,255,0.02)' : '#f8fafc' } : {}}
             onClick={() => !item.preChecked && onToggle(item.id)}
         >
             <div className="flex items-start gap-4">
-                <div style={{ width: 24, height: 24, borderRadius: 12, border: checked ? 'none' : '2px solid var(--border)', background: checked ? 'var(--ios-orange)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 2 }}>
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 transition-all duration-300 ${checked ? '' : isDarkMode ? 'border-2 border-slate-600' : 'border-2 border-slate-300'}`}
+                    style={checked ? { backgroundColor: '#f97316' } : {}}
+                >
                     <AnimatePresence>
                         {checked && <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}><Check size={14} color="white" strokeWidth={3} /></motion.div>}
                     </AnimatePresence>
                 </div>
                 <div className="flex-1">
-                    <div style={{ fontSize: '1rem', fontWeight: 500, color: checked ? 'var(--text-sec)' : 'var(--text-main)', textDecoration: checked ? 'line-through' : 'none' }}>
+                    <div className={`text-sm font-medium ${checked ? (isDarkMode ? 'text-slate-500 line-through' : 'text-slate-400 line-through') : (isDarkMode ? 'text-slate-200' : 'text-slate-800')}`}>
                         {item.label}
                         {item.preChecked && <span className={'text-[9px] ml-2 font-bold uppercase tracking-wider px-2 py-0.5 rounded-md ' + (isDarkMode ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-100 text-emerald-600')}>System Set</span>}
                     </div>
-                    {!checked && <div style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', marginTop: 4 }}>{item.detail}</div>}
+                    {!checked && <div className={`text-xs mt-1 ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>{item.detail}</div>}
                 </div>
             </div>
         </motion.div>
@@ -155,7 +157,7 @@ const RepBar = React.memo(({ label, trainingPct, hospitalPct, isDarkMode, delay,
     const gap = Math.abs(trainingPct - hospitalPct);
     const warn = gap > 15;
     return (
-        <motion.div initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, delay, ease: [0.16, 1, 0.3, 1] }} className={"p-3.5 rounded-2xl border transition-all duration-300 " + (isDarkMode ? 'bg-slate-800/40 border-slate-700/50' : 'bg-white border-slate-200 shadow-sm')}>
+        <motion.div initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, delay, ease: [0.16, 1, 0.3, 1] }} className={`p-3.5 rounded-2xl border transition-all duration-300 ${isDarkMode ? 'bg-white/[0.02] border-white/[0.06]' : 'bg-white border-slate-200 shadow-sm'}`}>
             <div className="flex justify-between items-center mb-4">
                 <span className={'text-xs font-bold uppercase tracking-wider ' + (isDarkMode ? 'text-slate-200' : 'text-slate-800')}>{label}</span>
                 {warn && <div className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded flex items-center justify-center"><AlertTriangle className="w-3 h-3" /> {gap.toFixed(0)}pp Diff</div>}
@@ -164,7 +166,7 @@ const RepBar = React.memo(({ label, trainingPct, hospitalPct, isDarkMode, delay,
                 <div className="flex items-center gap-3">
                     <span className={`text-[10px] w-14 font-semibold uppercase tracking-wider ${isDarkMode ? 'text-primary-300' : 'text-indigo-600'}`}>Train</span>
                     <div className={`flex-1 h-2.5 rounded-full overflow-hidden ${isDarkMode ? 'bg-slate-900/50 outline outline-1 outline-slate-700' : 'bg-slate-200 inset-shadow-sm'}`}>
-                        <motion.div className="h-full rounded-full" style={{ backgroundColor: primaryStr, filter: `drop-shadow(0 0 6px ${primaryStr}50)` }} initial={{ width: 0 }} animate={{ width: `${trainingPct}%` }} transition={{ duration: 0.8, delay: delay + 0.1, ease: 'easeOut' }} />
+                        <motion.div className="h-full rounded-full" style={{ backgroundColor: primaryStr }} initial={{ width: 0 }} animate={{ width: `${trainingPct}%` }} transition={{ duration: 0.8, delay: delay + 0.1, ease: 'easeOut' }} />
                     </div>
                     <span className={`text-xs font-mono font-black w-8 text-right`} style={{ color: primaryStr }}>{Math.round(trainingPct)}%</span>
                 </div>
@@ -179,6 +181,240 @@ const RepBar = React.memo(({ label, trainingPct, hospitalPct, isDarkMode, delay,
         </motion.div>
     );
 });
+
+// ─── Shared UI Helpers ────────────────────────────────────────────────────────
+const Card = ({ children, className = '', isDarkMode }) => (
+    <div className={`rounded-[32px] p-6 md:p-8 flex flex-col relative transition-colors ${isDarkMode ? 'bg-[#1c1c1e] border-[#2c2c2e]' : 'bg-white border-slate-100 shadow-[0_4px_24px_rgba(0,0,0,0.02)]'} border ${className}`}>
+        {children}
+    </div>
+);
+
+// ─── Subgroup Performance Table ───────────────────────────────────────────────
+const SubgroupPerformanceTable = ({ subgroups, isDarkMode }) => {
+    const overallSens = subgroups?.overall?.sens ?? 0;
+    const biasRows = subgroups?.rows?.filter(r => !r.isRef && overallSens - r.sens > 0.10) ?? [];
+    
+    return (
+        <Card isDarkMode={isDarkMode} className="h-full">
+            <div className="flex justify-between items-center mb-6">
+                <h3 className={`font-semibold text-[15px] uppercase tracking-widest ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>Subgroup Performance — Is the model fair?</h3>
+            </div>
+            
+            <div className="flex-1 overflow-x-auto custom-scrollbar">
+                <table className="w-full text-left" style={{ minWidth: 500 }}>
+                    <thead className={`border-b ${isDarkMode ? 'border-white/10' : 'border-slate-100'}`}>
+                        <tr>
+                            <th className="px-3 py-3 text-[10px] font-bold uppercase tracking-wider text-slate-400">Patient Group</th>
+                            <th className="px-3 py-3 text-[10px] font-bold uppercase tracking-wider text-slate-400">Accuracy</th>
+                            <th className="px-3 py-3 text-[10px] font-bold uppercase tracking-wider text-slate-400">Sensitivity</th>
+                            <th className="px-3 py-3 text-[10px] font-bold uppercase tracking-wider text-slate-400">Specificity</th>
+                            <th className="px-3 py-3 text-[10px] font-bold uppercase tracking-wider text-slate-400 text-right">Fairness</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {subgroups?.rows?.map((r, i) => {
+                            const gap = overallSens - r.sens;
+                            const isBad = !r.isRef && gap > 0.10;
+                            const isWarn = !r.isRef && gap > 0.05 && !isBad;
+                            return (
+                                <tr key={r.group} className={`border-b ${isDarkMode ? 'border-white/5' : 'border-slate-50'}`}>
+                                    <td className={`px-3 py-4 text-sm font-semibold ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>{r.group}</td>
+                                    <td className={`px-3 py-4 text-sm font-semibold ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>{Math.round(r.acc * 100)}%</td>
+                                    <td className={`px-3 py-4 text-sm font-bold ${isBad ? 'text-red-500' : isWarn ? 'text-amber-500' : 'text-emerald-500'}`}>{Math.round(r.sens * 100)}%</td>
+                                    <td className={`px-3 py-4 text-sm font-semibold ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>{Math.round(r.spec * 100)}%</td>
+                                    <td className="px-3 py-4 text-right">
+                                        {isBad ? (
+                                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-red-500/10 text-red-500 border border-red-500/20">
+                                                <AlertTriangle className="w-3 h-3" /> Review Needed
+                                            </span>
+                                        ) : isWarn ? (
+                                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                                                Review
+                                            </span>
+                                        ) : (
+                                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                                                OK
+                                            </span>
+                                        )}
+                                    </td>
+                                </tr>
+                            );
+                        })}
+                    </tbody>
+                </table>
+            </div>
+
+            {biasRows.length > 0 && (
+                <div className={`mt-4 p-4 rounded-2xl flex gap-3 ${isDarkMode ? 'bg-red-500/10 border border-red-500/20' : 'bg-red-50 border border-red-100'}`}>
+                    <AlertTriangle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+                    <p className={`text-xs leading-relaxed ${isDarkMode ? 'text-red-200' : 'text-red-800'}`}>
+                        <strong>Bias Detected:</strong> Sensitivity for <strong>{biasRows[0].group}</strong> ({Math.round(biasRows[0].sens * 100)}%) is {Math.round((overallSens - biasRows[0].sens) * 100)} percentage points lower than the baseline. This means the model misses far more cases in this group. <strong>This model should NOT be deployed until this gap is addressed.</strong>
+                    </p>
+                </div>
+            )}
+        </Card>
+    );
+};
+
+// ─── Sankey/Flow Chart (Bottom Left) ───────────────────────────────────────────
+const DatasetFlowChart = ({ subgroups, isDarkMode }) => {
+    const groups = subgroups?.rows?.slice(0, 5) || [];
+    const colors = ['#b09fff', '#60a5fa', '#c8f560', '#fcd34d', '#f87171'];
+    
+    const leftX = 0;
+    const rightX = 300;
+    const height = 240;
+    
+    const leftBlockHeight = 100;
+    const leftYStart = (height - leftBlockHeight) / 2;
+    
+    let currentRightY = 10;
+    let currentLeftY = leftYStart;
+    
+    const totalVal = groups.reduce((acc, g) => acc + g.val, 0) || 1;
+
+    return (
+        <Card isDarkMode={isDarkMode} className="h-full min-h-[300px]">
+            <div className="flex justify-between items-center mb-6 z-10">
+                <div className={`font-semibold text-[15px] uppercase tracking-widest ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>Dataset Flow by Subgroup</div>
+                <div className="flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border border-slate-200 dark:border-white/10 text-slate-500">
+                    <BookOpen className="w-3 h-3" /> Training Data ⌄
+                </div>
+            </div>
+            
+            <div className="flex-1 relative mt-4">
+                <svg viewBox="0 0 400 240" preserveAspectRatio="none" className="w-full h-full absolute inset-0 overflow-visible z-0">
+                    <rect x={leftX} y={leftYStart} width={40} height={leftBlockHeight} fill={isDarkMode ? '#3f3f46' : '#e2e8f0'} rx="4" />
+                    
+                    {groups.map((g, i) => {
+                        const proportion = g.val / totalVal;
+                        const rightHeight = Math.max(20, proportion * 180);
+                        const leftHeightPart = proportion * leftBlockHeight;
+                        
+                        const color = colors[i % colors.length];
+                        
+                        const startY1 = currentLeftY;
+                        const startY2 = currentLeftY + leftHeightPart;
+                        const endY1 = currentRightY;
+                        const endY2 = currentRightY + rightHeight;
+                        
+                        const path = `M ${leftX + 40} ${startY1} C ${leftX + 150} ${startY1}, ${rightX - 100} ${endY1}, ${rightX} ${endY1} L ${rightX} ${endY2} C ${rightX - 100} ${endY2}, ${leftX + 150} ${startY2}, ${leftX + 40} ${startY2} Z`;
+                        
+                        currentLeftY += leftHeightPart;
+                        currentRightY += rightHeight + 15;
+                        
+                        return (
+                            <path key={i} d={path} fill={color} opacity="0.6" className="transition-all hover:opacity-90 cursor-pointer" />
+                        );
+                    })}
+                </svg>
+
+                <div className="absolute inset-0 z-10 pointer-events-none">
+                    <div className="absolute left-0 top-1/2 -translate-y-1/2 translate-x-2">
+                        <div className={`text-[18px] font-bold ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>{totalVal}</div>
+                        <div className="text-[9px] font-semibold text-slate-500 uppercase tracking-wider">Total Cohort</div>
+                    </div>
+                    
+                    <div className="absolute right-0 top-0 bottom-0 flex flex-col pt-[10px]">
+                        {groups.map((g, i) => {
+                            const color = colors[i % colors.length];
+                            const proportion = g.val / totalVal;
+                            const rightHeight = Math.max(20, proportion * 180);
+                            return (
+                                <div key={i} className="flex items-center gap-2 pr-2" style={{ height: rightHeight + 'px', marginBottom: '15px' }}>
+                                    <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
+                                    <div className="flex flex-col">
+                                        <span className={`text-[10px] font-bold ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>{g.group}</span>
+                                        <span className={`text-[12px] font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{g.val} <span className="text-[9px] font-semibold text-slate-500">({Math.round(proportion*100)}%)</span></span>
+                                    </div>
+                                </div>
+                            )
+                        })}
+                    </div>
+                </div>
+            </div>
+        </Card>
+    );
+};
+
+// ─── Population Pyramid (Top Right) ───────────────────────────────────────────
+const PopulationPyramid = ({ isDarkMode }) => {
+    const data = [
+        { label: '75-100', m: 35, f: 45 },
+        { label: '50-75', m: 70, f: 80 },
+        { label: '25-50', m: 85, f: 75 },
+        { label: '0-25', m: 50, f: 45 },
+    ];
+    
+    return (
+        <Card isDarkMode={isDarkMode} className="h-full min-h-[300px]">
+            <div className="flex justify-between items-center mb-4 z-10">
+                <div className={`font-semibold text-[15px] uppercase tracking-widest ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>Patient Demographics</div>
+                <div className="flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border border-slate-200 dark:border-white/10 text-slate-500">
+                    <Activity className="w-3 h-3" /> Dist ⌄
+                </div>
+            </div>
+            
+            <div className="flex-1 flex flex-col justify-center items-center w-full px-4 relative">
+                {/* Labels */}
+                <div className="absolute left-0 right-0 flex flex-col justify-between h-[150px] py-3 pointer-events-none z-10">
+                    {data.map((d, i) => (
+                        <div key={i} className="flex justify-between w-full text-[10px] font-semibold text-slate-400">
+                            <span>{d.label}</span>
+                            <span>{d.label}</span>
+                        </div>
+                    ))}
+                </div>
+                
+                {/* Bars */}
+                <div className="w-full max-w-[200px] h-[150px] flex flex-col justify-between py-1 relative mb-4 mt-2">
+                    <div className="absolute top-0 bottom-0 left-1/2 w-px bg-slate-200 dark:bg-slate-700 -translate-x-1/2" />
+                    
+                    {data.map((d, i) => (
+                        <div key={i} className="w-full flex items-center justify-center relative h-6">
+                            <div className="absolute right-1/2 top-1 bottom-1 bg-gradient-to-l from-[#b09fff] to-[#b09fff]/50 rounded-l-sm" style={{ width: `${d.m}%` }} />
+                            <div className="absolute left-1/2 top-1 bottom-1 bg-gradient-to-r from-[#f87171] to-[#f87171]/50 rounded-r-sm" style={{ width: `${d.f}%` }} />
+                        </div>
+                    ))}
+                </div>
+                
+                {/* Bottom X-axis labels moved further down to avoid overlap */}
+                <div className="w-full max-w-[200px] flex justify-between text-[9px] font-bold text-slate-400 mt-2">
+                    <span>25%</span><span>0%</span><span>25%</span>
+                </div>
+            </div>
+            
+            <div className="flex justify-center gap-4 mt-auto pt-4 text-[10px] font-bold">
+                <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-sm bg-[#b09fff]" /> Male</div>
+                <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-sm bg-[#f87171]" /> Female</div>
+            </div>
+        </Card>
+    );
+};
+
+// ─── Rep Bars Card (Bottom Right) ───────────────────────────────────────────────
+const RepBarsCard = ({ repData, primaryStr, isDarkMode }) => {
+    if (!repData) return null;
+    return (
+        <Card isDarkMode={isDarkMode} className="h-full">
+            <h3 className={`font-semibold text-[15px] uppercase tracking-widest mb-6 ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>Training Data vs. Real Population</h3>
+            
+            <div className="space-y-4">
+                <RepBar label="Male Presentation" trainingPct={Math.round(repData.training.male * 100)} hospitalPct={Math.round(repData.hospital.male * 100)} isDarkMode={isDarkMode} delay={0.1} primaryStr={primaryStr} />
+                <RepBar label="Female Presentation" trainingPct={Math.round(repData.training.female * 100)} hospitalPct={Math.round(repData.hospital.female * 100)} isDarkMode={isDarkMode} delay={0.2} primaryStr={primaryStr} />
+            </div>
+
+            {Math.abs(repData.training.female - repData.hospital.female) > 0.15 && (
+                <div className={`mt-4 p-4 rounded-2xl flex gap-3 ${isDarkMode ? 'bg-amber-500/10 border border-amber-500/20' : 'bg-amber-50 border border-amber-100'}`}>
+                    <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+                    <p className={`text-xs leading-relaxed ${isDarkMode ? 'text-amber-200' : 'text-amber-800'}`}>
+                        <strong>Under-representation:</strong> Only {Math.round(repData.training.female * 100)}% of training patients were female, but {Math.round(repData.hospital.female * 100)}% of real patients are female. This mismatch explains the model's poor performance for women. Retrain with a more balanced dataset.
+                    </p>
+                </div>
+            )}
+        </Card>
+    );
+};
 
 // ─── PDF Report Generator ──────────────────────────────────────────────────────
 const generateCertificate = async ({ checked, subgroups, domain, trainedModelResult, repData }) => {
@@ -612,104 +848,74 @@ const EthicsBias = ({ isDarkMode, onPrev, domain, trainedModelResult }) => {
 
     return (
         <>
-        <motion.div variants={containerAnim} initial="hidden" animate="show" className="relative w-full pb-20">
+        <motion.div variants={containerAnim} initial="hidden" animate="show" className="relative w-full pb-44 max-w-7xl mx-auto">
             <FloatingParticles isDarkMode={isDarkMode} primaryStr={primaryStr} />
 
-            <div className="relative z-10 space-y-8">
-                {/* ═══════════════ HEADER ═══════════════ */}
-                <motion.div variants={itemAnim} className="mb-2">
-                    <motion.p 
-                        className="hero-subtitle" 
-                        initial={{ opacity: 0 }} 
-                        animate={{ opacity: 1 }}
-                        style={{ textAlign: 'center', marginBottom: 32 }}
-                    >
-                        Ethics & Bias
-                    </motion.p>
-                </motion.div>
+            <div className="relative z-10 space-y-6">
+                
+                {/* ═══════════════ ROW 1: TABLE & CHECKLIST ═══════════════ */}
+                <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+                    {/* LEFT COLUMN: 7 cols */}
+                    <div className="xl:col-span-7 flex flex-col gap-6">
+                        <SubgroupPerformanceTable subgroups={subgroups} isDarkMode={isDarkMode} />
+                    </div>
 
-                {/* ═══════════════ WARNING BANNERS ═══════════════ */}
-                {!loading && biasRows.length > 0 && (
-                    <motion.div 
-                        className="ios-card"
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        style={{ border: '1.5px solid rgba(255,59,48,0.3)', marginBottom: 24, padding: 24 }}
-                    >
-                        <div style={{ display: 'flex', gap: 16 }}>
-                        <div style={{ color: 'var(--ios-red)', marginTop: 2 }}>
-                            <AlertTriangle size={28} />
-                        </div>
-                        <div>
-                            <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--ios-red)', marginBottom: 8 }}>Subgroup Warning</div>
-                            <div style={{ fontSize: '0.9rem', color: 'var(--text-sec)', lineHeight: 1.5 }}>
-                            The model's sensitivity drops significantly for the <strong>{biasRows[0].group}</strong> subset (Sensitivity gap {"\u2193"}).
-                            This must be addressed before clinical deployment.
+                    {/* RIGHT COLUMN: 5 cols */}
+                    <div className="xl:col-span-5 flex flex-col gap-6">
+                        <Card isDarkMode={isDarkMode} className="h-full p-0 overflow-hidden">
+                            <div className="p-6 pb-4 border-b border-slate-100 dark:border-white/5">
+                                <h3 className={`font-semibold text-[15px] uppercase tracking-widest ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>EU AI Act Compliance Checklist</h3>
                             </div>
-                        </div>
-                        </div>
-                    </motion.div>
-                )}
-
-                {/* ═══════════════ TWO COLUMN LAYOUT ═══════════════ */}
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                    
-                    {/* LEFT: Target Performance Matrix */}
-                    <motion.div variants={itemAnim} className="ios-card lg:col-span-7 flex flex-col relative overflow-hidden" style={{ padding: 0 }}>
-                        <div style={{ padding: 24 }}>
-                            <div className="section-title">Cohort Sensitivities</div>
-                        </div>
-
-                        <div className={'flex-1 overflow-x-auto custom-scrollbar'}>
-                            {loading ? <div className="p-16 flex justify-center text-emerald-500"><div className="w-6 h-6 border-[3px] border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin" /></div> :
-                                <table className="w-full text-left" style={{ minWidth: 600 }}>
-                                    <thead className={isDarkMode ? 'bg-slate-800/30' : 'bg-slate-50/50'}>
-                                        <tr>
-                                            <th className="px-5 py-4 text-[10px] font-bold uppercase text-slate-500 tracking-wider">Demographic</th>
-                                            <th className="px-3 py-4 text-[10px] font-bold uppercase text-slate-500 tracking-wider text-center">Accuracy</th>
-                                            <th className="px-3 py-4 text-[10px] font-bold uppercase tracking-wider text-center" style={{ color: 'var(--text-main)' }}>Sensitivity</th>
-                                            <th className="px-3 py-4 text-[10px] font-bold uppercase text-slate-500 tracking-wider text-center">S.Index</th>
-                                            <th className="px-3 py-4 text-[10px] font-bold uppercase text-slate-500 tracking-wider text-center">Spec.</th>
-                                            <th className="px-5 py-4 text-[10px] font-bold uppercase text-slate-500 tracking-wider text-right">Audit</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>{subgroups?.rows.map((r, i) => <SubgroupRow key={r.group} {...r} overall={subgroups.overall} isDarkMode={isDarkMode} delay={i * 0.05} />)}</tbody>
-                                </table>}
-                        </div>
-                    </motion.div>
-
-                    {/* RIGHT: Checklist */}
-                    <motion.div variants={itemAnim} className="ios-list lg:col-span-5 flex flex-col relative" style={{ overflow: 'hidden' }}>
-                        <div style={{ padding: '24px 24px 12px' }}>
-                            <div className="section-title" style={{ marginBottom: 0 }}>Ethics Checklist</div>
-                        </div>
-                        <div className="flex flex-col flex-1 overflow-y-auto custom-scrollbar">
-                            {CHECKLIST_ITEMS.map((item, i) => (
-                                <ChecklistItem key={item.id} item={item} checked={checkedItems.includes(item.id)} onToggle={id => setCheckedItems(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id])} isDarkMode={isDarkMode} delay={i * 0.05} />
-                            ))}
-                        </div>
-                    </motion.div>
+                            <div className="flex flex-col p-2">
+                                {CHECKLIST_ITEMS.map((item, i) => (
+                                    <ChecklistItem key={item.id} item={item} checked={checkedItems.includes(item.id)} onToggle={id => setCheckedItems(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id])} isDarkMode={isDarkMode} delay={i * 0.05} />
+                                ))}
+                            </div>
+                        </Card>
+                    </div>
                 </div>
 
-                {/* ═══════════════ BOTTOM SECTION ═══════════════ */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <motion.div variants={itemAnim} className="ios-card">
-                        <div className="section-title">Data Source Drift Parity</div>
-                        {!loading && (
-                            <div className="space-y-4 pt-4">
-                                <RepBar label="Male Presentation" trainingPct={Math.round(repData.training.male * 100)} hospitalPct={Math.round(repData.hospital.male * 100)} isDarkMode={isDarkMode} delay={0.1} primaryStr={primaryStr} />
-                                <RepBar label="Female Presentation" trainingPct={Math.round(repData.training.female * 100)} hospitalPct={Math.round(repData.hospital.female * 100)} isDarkMode={isDarkMode} delay={0.2} primaryStr={primaryStr} />
-                                <RepBar label="Elderly Baseline (>76)" trainingPct={Math.round(repData.training.elderly * 100)} hospitalPct={Math.round(repData.hospital.elderly * 100)} isDarkMode={isDarkMode} delay={0.3} primaryStr={primaryStr} />
-                            </div>
-                        )}
-                    </motion.div>
+                {/* ═══════════════ ROW 2: REP BARS & CASE STUDIES ═══════════════ */}
+                <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 pt-2">
+                    {/* LEFT: 7 cols */}
+                    <div className="xl:col-span-7 flex flex-col gap-6">
+                        <RepBarsCard repData={repData} primaryStr={primaryStr} isDarkMode={isDarkMode} />
+                    </div>
 
-                    <motion.div variants={itemAnim} className="ios-card flex flex-col gap-4">
-                        <div className="section-title">Case Precedent</div>
-                        <div className="space-y-3 pt-2">
-                            {CASE_STUDIES.map((cs, i) => <CaseStudyCard key={cs.title} cs={cs} isDarkMode={isDarkMode} delay={i * 0.1} />)}
+                    {/* RIGHT: 5 cols */}
+                    <div className="xl:col-span-5 flex flex-col gap-6">
+                        <Card isDarkMode={isDarkMode} className="h-full p-6">
+                            <h3 className={`font-semibold text-[15px] uppercase tracking-widest mb-6 ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>Real-World AI Failures in Healthcare</h3>
+                            <div className="space-y-4 pt-2">
+                                {CASE_STUDIES.map((cs, i) => <CaseStudyCard key={cs.title} cs={cs} isDarkMode={isDarkMode} delay={i * 0.1} />)}
+                            </div>
+                        </Card>
+                    </div>
+                </div>
+
+                {/* ═══════════════ ROW 3: FLOW & PYRAMID ═══════════════ */}
+                <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 pt-2">
+                    {/* LEFT: 7 cols */}
+                    <div className="xl:col-span-7 flex flex-col gap-6">
+                        <DatasetFlowChart subgroups={subgroups} isDarkMode={isDarkMode} />
+                    </div>
+
+                    {/* RIGHT: 5 cols */}
+                    <div className="xl:col-span-5 flex flex-col gap-6">
+                        <PopulationPyramid isDarkMode={isDarkMode} />
+                    </div>
+                </div>
+
+                {/* ═══════════════ ROW 4: CONGRATULATIONS BANNER ═══════════════ */}
+                <div className="pt-6">
+                    <div className={`p-6 rounded-2xl flex items-center gap-4 ${isDarkMode ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-emerald-50 border border-emerald-100'}`}>
+                        <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0">
+                            <span className="text-xl">🎓</span>
                         </div>
-                    </motion.div>
+                        <p className={`text-sm leading-relaxed ${isDarkMode ? 'text-emerald-200' : 'text-emerald-800'}`}>
+                            <strong>Congratulations — you have completed all 7 steps.</strong> You have defined a clinical problem, explored patient data, prepared it correctly, trained and compared ML models, evaluated results with clinical metrics, understood why the model makes predictions, and checked it for fairness. Download your Summary Certificate to document what you built.
+                        </p>
+                    </div>
                 </div>
 
                 {/* ── Navigation ── */}
@@ -720,8 +926,8 @@ const EthicsBias = ({ isDarkMode, onPrev, domain, trainedModelResult }) => {
                     </motion.button>
                      <motion.button onClick={handleGenerateCert} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
                         disabled={isGenerating}
-                        className="action-button primary flex gap-2 w-auto"
-                        style={!isGenerating ? { background: `linear-gradient(135deg, ${primaryStr}, ${secondaryStr})`, boxShadow: `0 8px 30px #10b98140` } : {}}
+                        className={`flex items-center gap-2 px-6 py-2.5 rounded-2xl text-sm font-bold text-white transition-all duration-300 ${isGenerating ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        style={!isGenerating ? { backgroundColor: primaryStr } : { backgroundColor: isDarkMode ? '#334155' : '#94a3b8' }}
                     >
                         {isGenerating ? <div className="w-4 h-4 border-2 border-white/50 border-t-white rounded-full animate-spin" /> : <><Download className="w-4 h-4 text-white" /> Report</>}
                     </motion.button>
@@ -740,6 +946,6 @@ const EthicsBias = ({ isDarkMode, onPrev, domain, trainedModelResult }) => {
         </AnimatePresence>
         </>
     );
-};
+}
 
 export default EthicsBias;
