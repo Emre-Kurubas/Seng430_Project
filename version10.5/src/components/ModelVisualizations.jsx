@@ -143,7 +143,7 @@ const formatFeatureName = (name) => {
 /* ═══════════════════════════════════════════════════════════════
    1. KNN — Scatter Plot with K-Radius
 ═══════════════════════════════════════════════════════════════ */
-const KNNViz = React.memo(({ params, isDarkMode, datasetSchema, targetColumn, primaryStr, secondaryStr }) => {
+const KNNViz = React.memo(({ params, isDarkMode, datasetSchema, targetColumn, primaryStr, secondaryStr, trainedModelResult }) => {
     const canvasRef = useRef(null);
     const COLORS = getColors(isDarkMode);
     const k = params.knn.k;
@@ -152,13 +152,32 @@ const KNNViz = React.memo(({ params, isDarkMode, datasetSchema, targetColumn, pr
     const fNames = getFeatureNames(datasetSchema);
     const tName = targetColumn || 'Outcome';
 
-    const pts = useMemo(() => [
-        [0.2, 0.3, 0], [0.25, 0.55, 0], [0.15, 0.65, 1], [0.3, 0.75, 1], [0.4, 0.4, 0],
-        [0.5, 0.25, 0], [0.45, 0.6, 1], [0.55, 0.7, 1], [0.65, 0.45, 0], [0.7, 0.6, 1],
-        [0.75, 0.3, 0], [0.8, 0.65, 1], [0.35, 0.2, 0], [0.6, 0.8, 1], [0.85, 0.4, 0],
-        [0.1, 0.45, 1], [0.9, 0.7, 1], [0.6, 0.15, 0], [0.28, 0.42, 0], [0.52, 0.48, 1],
-        [0.38, 0.85, 1], [0.72, 0.18, 0], [0.18, 0.22, 0], [0.82, 0.52, 1], [0.42, 0.32, 0],
-    ], []);
+    // Use real test-set points from the trained model when available,
+    // otherwise fall back to the static demo points.
+    const pts = useMemo(() => {
+        const XTest = trainedModelResult?.XTest;
+        const yTest = trainedModelResult?.yTest;
+        if (XTest && XTest.length > 1 && XTest[0].length >= 2) {
+            const sample = XTest.slice(0, 80);
+            const ySlice = yTest ? yTest.slice(0, 80) : sample.map(() => 0);
+            // Normalise first two features to [0.05, 0.95]
+            let min0 = Infinity, max0 = -Infinity, min1 = Infinity, max1 = -Infinity;
+            sample.forEach(r => { if (r[0] < min0) min0 = r[0]; if (r[0] > max0) max0 = r[0]; if (r[1] < min1) min1 = r[1]; if (r[1] > max1) max1 = r[1]; });
+            const r0 = (max0 - min0) || 1; const r1 = (max1 - min1) || 1;
+            return sample.map((r, i) => [
+                0.05 + ((r[0] - min0) / r0) * 0.9,
+                0.05 + ((r[1] - min1) / r1) * 0.9,
+                ySlice[i]
+            ]);
+        }
+        return [
+            [0.2, 0.3, 0], [0.25, 0.55, 0], [0.15, 0.65, 1], [0.3, 0.75, 1], [0.4, 0.4, 0],
+            [0.5, 0.25, 0], [0.45, 0.6, 1], [0.55, 0.7, 1], [0.65, 0.45, 0], [0.7, 0.6, 1],
+            [0.75, 0.3, 0], [0.8, 0.65, 1], [0.35, 0.2, 0], [0.6, 0.8, 1], [0.85, 0.4, 0],
+            [0.1, 0.45, 1], [0.9, 0.7, 1], [0.6, 0.15, 0], [0.28, 0.42, 0], [0.52, 0.48, 1],
+            [0.38, 0.85, 1], [0.72, 0.18, 0], [0.18, 0.22, 0], [0.82, 0.52, 1], [0.42, 0.32, 0],
+        ];
+    }, [trainedModelResult]);
 
     const newPt = useMemo(() => [0.48, 0.52], []);
 
@@ -579,6 +598,10 @@ const SVMViz = React.memo(({ params, isDarkMode, datasetSchema, targetColumn, pr
             <VizDescription isDarkMode={isDarkMode}>
                 SVM draws a boundary to separate patient groups based on {fNames[0]} and {fNames[1]}. <strong>Support vectors</strong> (outlined) are edge cases on the fence. Adjust <strong>C</strong> to see how strictness changes the margin.
             </VizDescription>
+            {/* Approximation notice — SVM boundary shown is a mathematical model, not pixel-perfect from the solver */}
+            <div className={'mb-2 px-3 py-1.5 rounded-lg text-[11px] font-semibold flex items-center gap-2 w-fit ' + (isDarkMode ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 'bg-amber-50 text-amber-600 border border-amber-200')}>
+                <span>⚠️</span> Decision boundary is illustrative — exact SVM boundary is high-dimensional
+            </div>
             <motion.canvas ref={canvasRef} style={getVizCanvasStyle(isDarkMode)} initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.4 }} />
             <LegendRow isDarkMode={isDarkMode} primaryStr={primaryStr} items={[
                 { color: COLORS.red, label: tName },
@@ -839,30 +862,48 @@ const DTViz = React.memo(({ params, isDarkMode, datasetSchema, targetColumn, pri
 /* ═══════════════════════════════════════════════════════════════
    4. Random Forest — Mini-Tree Voting Cards + Vote Bars
 ═══════════════════════════════════════════════════════════════ */
-const RFViz = React.memo(({ params, isDarkMode, datasetSchema, targetColumn, primaryStr, secondaryStr, dataset }) => {
+const RFViz = React.memo(({ params, isDarkMode, datasetSchema, targetColumn, primaryStr, secondaryStr, dataset, trainedModelResult }) => {
     const COLORS = getColors(isDarkMode);
     const { trees } = params.rf;
     const n = trees;
-    const showTrees = n; // Show all trees up to the model's limit
     const tName = targetColumn || 'Outcome';
 
     const voteData = useMemo(() => {
-        let actualBaseRate = 0.65;
-        if (dataset && dataset.length > 0 && targetColumn) {
-            const targetValues = [...new Set(dataset.map(row => row[targetColumn]).filter(v => v !== undefined && v !== ''))];
-            // ML Engine maps targetValues[1] to positive class (1 = Risk/Red)
-            const posClass = targetValues.length > 1 ? targetValues[1] : targetValues[0];
-            const posCount = dataset.filter(r => r[targetColumn] === posClass).length;
-            actualBaseRate = posCount / dataset.length; 
+        // Prefer real per-estimator votes exported from mlEngine
+        const perEst = trainedModelResult?.perEstimatorVotes;
+        if (perEst && perEst.length > 0) {
+            // perEst[estimatorIdx][sampleIdx] -> predicted label
+            // Show up to 'n' estimators (may be fewer if model used fewer)
+            const showCount = Math.min(n, perEst.length);
+            const treeVotes = [];
+            let posVotes = 0;
+            for (let i = 0; i < showCount; i++) {
+                // majority vote for this estimator over all test samples
+                const votes = perEst[i];
+                const pos = votes.filter(v => v === 1).length;
+                const vote = pos >= votes.length / 2 ? 1 : 0;
+                treeVotes.push(vote);
+                if (vote === 1) posVotes++;
+            }
+            const negVotes = showCount - posVotes;
+            const posPct = Math.round((posVotes / showCount) * 100);
+            const negPct = 100 - posPct;
+            const displayTrees = treeVotes.map((vote, i) => ({ id: i, vote: vote === 1 ? 'positive' : 'negative' }));
+            return { posVotes, negVotes, posPct, negPct, displayTrees };
         }
 
-        // Seed with actualBaseRate so it remains visually stable but dataset-specific
+        // Fallback: use dataset base rate to seed the display when model not yet trained
+        let actualBaseRate = 0.5;
+        if (dataset && dataset.length > 0 && targetColumn) {
+            const targetValues = [...new Set(dataset.map(row => row[targetColumn]).filter(v => v !== undefined && v !== ''))];
+            const posClass = targetValues.length > 1 ? targetValues[1] : targetValues[0];
+            const posCount = dataset.filter(r => r[targetColumn] === posClass).length;
+            actualBaseRate = posCount / dataset.length;
+        }
         const seededRandom = (i) => { const x = Math.sin(i * 12.9898 + (actualBaseRate * 100)) * 43758.5453; return x - Math.floor(x); };
-        
         let posVotes = 0;
         const treeVotes = [];
         for (let i = 0; i < n; i++) {
-            // Compare random against dataset's actual positive rate
             const isPos = seededRandom(i) < actualBaseRate;
             const vote = isPos ? 1 : 0;
             treeVotes.push(vote);
@@ -871,9 +912,9 @@ const RFViz = React.memo(({ params, isDarkMode, datasetSchema, targetColumn, pri
         const negVotes = n - posVotes;
         const posPct = Math.round((posVotes / n) * 100);
         const negPct = 100 - posPct;
-        const displayTrees = treeVotes.slice(0, showTrees).map((vote, i) => ({ id: i, vote: vote === 1 ? 'positive' : 'negative' }));
+        const displayTrees = treeVotes.map((vote, i) => ({ id: i, vote: vote === 1 ? 'positive' : 'negative' }));
         return { posVotes, negVotes, posPct, negPct, displayTrees };
-    }, [n, showTrees]);
+    }, [n, trainedModelResult, dataset, targetColumn]);
 
     const { posVotes, negVotes, posPct, negPct, displayTrees } = voteData;
 
@@ -955,7 +996,7 @@ const RFViz = React.memo(({ params, isDarkMode, datasetSchema, targetColumn, pri
 /* ═══════════════════════════════════════════════════════════════
    5. Logistic Regression — S-Curve (Canvas)
 ═══════════════════════════════════════════════════════════════ */
-const LRViz = React.memo(({ isDarkMode, datasetSchema, targetColumn, primaryStr, secondaryStr, dataset }) => {
+const LRViz = React.memo(({ isDarkMode, datasetSchema, targetColumn, primaryStr, secondaryStr, dataset, trainedModelResult }) => {
     const canvasRef = useRef(null);
     const COLORS = getColors(isDarkMode);
     const tName = targetColumn || 'Outcome';
@@ -964,7 +1005,8 @@ const LRViz = React.memo(({ isDarkMode, datasetSchema, targetColumn, primaryStr,
         if (!dataset || dataset.length === 0 || !datasetSchema) return { patientEF: 38, xMin: 14, xMax: 80, x0: 52, fName: 'Feature', sigmoid: (val)=>0.5, kFactor: 0.1 };
         
         const numCols = datasetSchema.filter(c => (c.role === 'Number (measurement)' || c.role === 'Category') && c.name !== targetColumn).map(c => c.name);
-        const selectedFeat = numCols[0] || 'Değer';
+        const selectedFeat = numCols[0] || 'Feature';
+        const featIdx = numCols.indexOf(selectedFeat);
         
         let minV = Infinity; let maxV = -Infinity; let sum = 0; let count = 0;
         let highRiskPatient = null;
@@ -986,11 +1028,22 @@ const LRViz = React.memo(({ isDarkMode, datasetSchema, targetColumn, primaryStr,
         minV = Math.floor(minV);
         maxV = Math.ceil(maxV);
         const range = Math.max(1, maxV - minV);
-        const kF = 10 / range; // Scale steepness organically to data spread
 
-        const sigm = (ef) => 1 / (1 + Math.exp(-kF * (ef - meanV))); // true logistic function
-        return { patientEF: highRiskPatient, xMin: minV, xMax: maxV, x0: meanV, fName: selectedFeat, sigmoid: sigm, kFactor: kF };
-    }, [dataset, datasetSchema, targetColumn]);
+        // Use real trained LR weights when available (lrWeights = [bias, w0, w1, ...])
+        const lrWeights = trainedModelResult?.lrWeights;
+        let sigm;
+        if (lrWeights && lrWeights.length > featIdx + 1 && featIdx >= 0) {
+            const bias = lrWeights[0];
+            const coeff = lrWeights[featIdx + 1]; // +1 because index 0 is bias
+            sigm = (val) => 1 / (1 + Math.exp(-(bias + coeff * val)));
+        } else {
+            // Fallback: data-derived sigmoid (used before training completes)
+            const kF = 10 / range;
+            sigm = (val) => 1 / (1 + Math.exp(-kF * (val - meanV)));
+        }
+
+        return { patientEF: highRiskPatient, xMin: minV, xMax: maxV, x0: meanV, fName: selectedFeat, sigmoid: sigm, kFactor: 10 / range };
+    }, [dataset, datasetSchema, targetColumn, trainedModelResult]);
 
     const patientProb = sigmoid(patientEF);
     const patientPct = Math.round(patientProb * 100);
@@ -1289,7 +1342,7 @@ const NBViz = React.memo(({ params, isDarkMode, datasetSchema, targetColumn, pri
 /* ═══════════════════════════════════════════════════════════════
    MAIN EXPORT — Model Visualizer Switch
 ═══════════════════════════════════════════════════════════════ */
-const ModelVisualizer = React.memo(({ selectedModel, params, isDarkMode, datasetSchema, targetColumn, domain, dataset }) => {
+const ModelVisualizer = React.memo(({ selectedModel, params, isDarkMode, datasetSchema, targetColumn, domain, dataset, trainedModelResult }) => {
     const primaryStr = domain?.theme?.primary || '#6366f1';
     const secondaryStr = domain?.theme?.secondary || '#10b981';
 
@@ -1304,12 +1357,12 @@ const ModelVisualizer = React.memo(({ selectedModel, params, isDarkMode, dataset
             >
                 {(() => {
                     switch (selectedModel) {
-                        case 'knn': return <KNNViz params={params} isDarkMode={isDarkMode} datasetSchema={datasetSchema} targetColumn={targetColumn} primaryStr={primaryStr} secondaryStr={secondaryStr} dataset={dataset} />;
-                        case 'svm': return <SVMViz params={params} isDarkMode={isDarkMode} datasetSchema={datasetSchema} targetColumn={targetColumn} primaryStr={primaryStr} secondaryStr={secondaryStr} dataset={dataset} />;
-                        case 'lr': return <LRViz params={params} isDarkMode={isDarkMode} datasetSchema={datasetSchema} targetColumn={targetColumn} primaryStr={primaryStr} secondaryStr={secondaryStr} dataset={dataset} />;
+                        case 'knn': return <KNNViz params={params} isDarkMode={isDarkMode} datasetSchema={datasetSchema} targetColumn={targetColumn} primaryStr={primaryStr} secondaryStr={secondaryStr} dataset={dataset} trainedModelResult={trainedModelResult} />;
+                        case 'svm': return <SVMViz params={params} isDarkMode={isDarkMode} datasetSchema={datasetSchema} targetColumn={targetColumn} primaryStr={primaryStr} secondaryStr={secondaryStr} dataset={dataset} trainedModelResult={trainedModelResult} />;
+                        case 'lr': return <LRViz params={params} isDarkMode={isDarkMode} datasetSchema={datasetSchema} targetColumn={targetColumn} primaryStr={primaryStr} secondaryStr={secondaryStr} dataset={dataset} trainedModelResult={trainedModelResult} />;
                         case 'dt': return <DTViz params={params} isDarkMode={isDarkMode} datasetSchema={datasetSchema} targetColumn={targetColumn} primaryStr={primaryStr} secondaryStr={secondaryStr} dataset={dataset} />;
-                        case 'rf': return <RFViz params={params} isDarkMode={isDarkMode} datasetSchema={datasetSchema} targetColumn={targetColumn} primaryStr={primaryStr} secondaryStr={secondaryStr} dataset={dataset} />;
-                        case 'nb': return <NBViz params={params} isDarkMode={isDarkMode} datasetSchema={datasetSchema} targetColumn={targetColumn} primaryStr={primaryStr} secondaryStr={secondaryStr} dataset={dataset} />;
+                        case 'rf': return <RFViz params={params} isDarkMode={isDarkMode} datasetSchema={datasetSchema} targetColumn={targetColumn} primaryStr={primaryStr} secondaryStr={secondaryStr} dataset={dataset} trainedModelResult={trainedModelResult} />;
+                        case 'nb': return <NBViz params={params} isDarkMode={isDarkMode} datasetSchema={datasetSchema} targetColumn={targetColumn} primaryStr={primaryStr} secondaryStr={secondaryStr} dataset={dataset} trainedModelResult={trainedModelResult} />;
                         default: return <div className={isDarkMode ? 'text-slate-500' : 'text-slate-400'}>Select a model to visualize</div>;
                     }
                 })()}
