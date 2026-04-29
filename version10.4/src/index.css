@@ -1,0 +1,1370 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+/* Tailwind */
+@import "tailwindcss";
+@config "../tailwind.config.js";
+
+/* Custom Cursor — rounded organic pointer */
+* {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cpath d='M8.5 4C8.2 3.7 7.7 3.9 7.7 4.3L7 22.5C7 22.9 7.5 23.2 7.8 22.9L12.5 18.5C12.7 18.3 13 18.3 13.2 18.5L16.2 23.8C16.4 24.1 16.7 24.2 17 24L19 22.8C19.3 22.6 19.4 22.3 19.2 22L16.2 16.8C16 16.5 16.1 16.2 16.4 16.1L22.5 14.5C22.9 14.4 23 13.9 22.7 13.6L8.5 4Z' fill='white' stroke='%231a1a1a' stroke-width='2' stroke-linejoin='round' stroke-linecap='round'/%3E%3C/svg%3E") 7 4, auto !important;
+}
+
+button, a, select, input[type='range'], label, 
+[role='button'], .sidebar-nav-item, .macos-icon-btn,
+.action-button, .ios-card, .model-card {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cpath d='M8.5 6C8.2 5.7 7.7 5.9 7.7 6.3L7 22.5C7 22.9 7.5 23.2 7.8 22.9L12.5 18.5C12.7 18.3 13 18.3 13.2 18.5L16.2 23.8C16.4 24.1 16.7 24.2 17 24L19 22.8C19.3 22.6 19.4 22.3 19.2 22L16.2 16.8C16 16.5 16.1 16.2 16.4 16.1L22.5 14.5C22.9 14.4 23 13.9 22.7 13.6L8.5 6Z' fill='%23e8e8ee' stroke='%231a1a1a' stroke-width='2' stroke-linejoin='round' stroke-linecap='round'/%3E%3Cline x1='3' y1='3' x2='1' y2='1' stroke='%231a1a1a' stroke-width='1.8' stroke-linecap='round'/%3E%3Cline x1='6' y1='1.5' x2='5.5' y2='0' stroke='%231a1a1a' stroke-width='1.8' stroke-linecap='round'/%3E%3Cline x1='1.5' y1='6' x2='0' y2='5.5' stroke='%231a1a1a' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E") 7 6, pointer !important;
+}
+
+:root {
+  --app-bg: #1c1c1e; /* Solid dark outer shell for dashboard layout */
+  --dashboard-bg: #f3f4f6; /* Inner main content light gray */
+  --sidebar-bg: transparent; 
+  --bg-card: #ffffff; /* Solid bento card style */
+  --bg-card-solid: #ffffff;
+  --bg-card-secondary: #f9fafb;
+  --text-main: #111827;
+  --text-sec: #6b7280;
+  --text-tertiary: #9ca3af;
+  --border: rgba(0, 0, 0, 0.05);
+  --border-strong: rgba(0, 0, 0, 0.1);
+
+  /* Apple Palette */
+  --ios-blue: #007aff;
+  --ios-green: #34c759;
+  --ios-indigo: #5856d6;
+  --ios-orange: #ff9500;
+  --ios-pink: #ff2d55;
+  --ios-purple: #af52de;
+  --ios-red: #ff3b30;
+  --ios-teal: #5ac8fa;
+  --ios-yellow: #ffcc00;
+
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.03), 0 1px 2px rgba(0,0,0,0.02);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.02);
+  --shadow-lg: 0 12px 32px rgba(0,0,0,0.06), 0 4px 12px rgba(0,0,0,0.02);
+  --shadow-glow: none;
+
+  --radius-sm: 16px;
+  --radius-md: 24px;
+  --radius-lg: 32px;
+}
+
+[data-theme="dark"], html.dark {
+  --app-bg: #09090b;
+  --dashboard-bg: #121214;
+  --sidebar-bg: transparent;
+  --bg-card: #1c1c1e;
+  --bg-card-solid: #1c1c1e;
+  --bg-card-secondary: #27272a;
+  --text-main: #fcfcfd;
+  --text-sec: #a1a1aa;
+  --text-tertiary: #71717a;
+  --border: rgba(255, 255, 255, 0.05);
+  --border-strong: rgba(255, 255, 255, 0.1);
+
+  /* Vibrant dark */
+  --ios-blue: #0a84ff;
+  --ios-green: #30d158;
+  --ios-indigo: #5e5ce6;
+  --ios-orange: #ff9f0a;
+  --ios-pink: #ff375f;
+  --ios-purple: #bf5af2;
+  --ios-red: #ff453a;
+  --ios-teal: #64d2ff;
+  --ios-yellow: #ffd60a;
+
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.35);
+  --shadow-lg: 0 12px 40px rgba(0,0,0,0.5);
+  --shadow-glow: 0 0 0 1px rgba(255,255,255,0.08) inset;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  background-color: var(--app-bg);
+  color: var(--text-main);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.5s ease, color 0.5s ease;
+  overflow-x: clip;
+  min-height: 100vh;
+
+}
+
+/* macOS-style scrollbar */
+::-webkit-scrollbar { width: 10px; background: transparent; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: rgba(128, 128, 128, 0.25);
+  border-radius: 10px;
+  border: 2px solid var(--app-bg);
+}
+::-webkit-scrollbar-thumb:hover { background: rgba(128, 128, 128, 0.4); }
+
+/* Premium Range Sliders */
+.premium-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  outline: none;
+}
+.premium-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 1px solid rgba(0,0,0,0.1);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15), 0 1px 2px rgba(0,0,0,0.1);
+  cursor: grab;
+  margin-top: -7px; /* Center thumb on track */
+  transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s;
+}
+.premium-slider:active::-webkit-slider-thumb {
+  transform: scale(1.15);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2), 0 2px 4px rgba(0,0,0,0.15);
+  cursor: grabbing;
+}
+[data-theme="dark"] .premium-slider::-webkit-slider-thumb, 
+html.dark .premium-slider::-webkit-slider-thumb {
+  background: #2c2c2e;
+  border: 1px solid rgba(255,255,255,0.15);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1);
+}
+.premium-slider::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 6px;
+  border: none;
+}
+
+/* ─── Typography ─── */
+h1, h2, h3, h4, h5 {
+  font-family: inherit;
+  letter-spacing: -0.025em;
+}
+
+.hero-title {
+  font-size: 3.2rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1.08;
+  margin-bottom: 14px;
+  background: linear-gradient(135deg, var(--text-main) 30%, var(--text-sec) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero-subtitle {
+  font-size: 1.15rem;
+  color: var(--text-sec);
+  font-weight: 500;
+  line-height: 1.6;
+  letter-spacing: -0.01em;
+}
+
+.section-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-bottom: 20px;
+  letter-spacing: -0.02em;
+}
+
+/* ─── Dashboard Layout Revamp ─── */
+.dashboard-wrapper {
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  display: flex;
+}
+
+.dashboard-container {
+  display: flex;
+  width: 100%;
+  height: 100vh;
+  box-sizing: border-box;
+  padding: 12px;
+}
+
+.dashboard-sidebar {
+  width: 260px;
+  display: flex;
+  flex-direction: column;
+  padding: 24px 20px;
+  background: var(--sidebar-bg);
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.sidebar-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 48px;
+  padding: 0 8px;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex-grow: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 8px;
+}
+
+.sidebar-nav::-webkit-scrollbar { width: 4px; }
+.sidebar-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+.sidebar-nav::-webkit-scrollbar-track { background: transparent; }
+
+.sidebar-nav-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  border-radius: 999px; /* Pill shape */
+  background: transparent;
+  color: #a1a1aa;
+  border: none;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.sidebar-nav-item:hover:not(.locked) {
+  color: #fff;
+  background: rgba(255,255,255,0.05);
+}
+
+.sidebar-nav-item.active {
+  background: #fff;
+  color: #09090b;
+  font-weight: 600;
+}
+
+.nav-item-content {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.nav-badge {
+  background: #ccff00;
+  color: #000;
+  font-size: 0.7rem;
+  font-weight: 700;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.sidebar-nav-item.pending {
+  background: rgba(255, 149, 0, 0.15);
+  color: #ff9500;
+  font-weight: 600;
+  position: relative;
+}
+
+.sidebar-nav-item.locked {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+@keyframes pulseGlow {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+.sidebar-promo {
+  background: #ccff00;
+  border-radius: 24px;
+  padding: 20px;
+  text-align: left;
+  color: #000;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(204,255,0,0.15);
+}
+
+.promo-btn {
+  background: #1a1a1c;
+  color: #fff;
+  width: 100%;
+  padding: 12px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.promo-btn:hover {
+  transform: scale(1.03);
+}
+
+.app-layout {
+  flex-grow: 1;
+  background: var(--dashboard-bg);
+  border-radius: 36px;
+  padding: 80px 120px 80px 48px;
+  position: relative;
+  z-index: 10;
+  overflow-y: auto;
+  overflow-x: hidden;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+  margin-left: 12px;
+}
+
+/* Scrollbar scoped to main body */
+.app-layout::-webkit-scrollbar { width: 8px; }
+.app-layout::-webkit-scrollbar-track { background: transparent; }
+.app-layout::-webkit-scrollbar-thumb {
+  background: rgba(128,128,128,0.2);
+  border-radius: 8px;
+}
+
+/* ─── Bento Cards ─── */
+.ios-card {
+  background: var(--bg-card);
+  border-radius: var(--radius-md);
+  padding: 32px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-md), var(--shadow-glow);
+  margin-bottom: 20px;
+  position: relative;
+  overflow: hidden;
+  transition:
+    transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1),
+    box-shadow 0.35s ease,
+    border-color 0.3s ease;
+}
+
+.ios-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+  opacity: 0.6;
+}
+
+.ios-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg), var(--shadow-glow);
+  border-color: var(--border-strong);
+}
+
+/* ─── Lists ─── */
+.ios-list {
+  background: var(--bg-card);
+  backdrop-filter: blur(40px) saturate(1.6);
+  -webkit-backdrop-filter: blur(40px) saturate(1.6);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-md), var(--shadow-glow);
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+.ios-list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  transition: background 0.15s ease;
+}
+
+.ios-list-item:hover {
+  background: rgba(128, 128, 128, 0.04);
+}
+
+.ios-list-item:last-child { border-bottom: none; }
+
+.ios-list-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.ios-list-subtitle {
+  font-size: 0.82rem;
+  color: var(--text-sec);
+}
+
+/* ─── Bottom Dock (macOS Dock inspired) ─── */
+.bottom-nav-container {
+  position: fixed;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 0;
+  z-index: 100;
+}
+
+.bottom-nav {
+  background: var(--bg-card);
+  backdrop-filter: blur(40px) saturate(1.8);
+  -webkit-backdrop-filter: blur(40px) saturate(1.8);
+  padding: 8px 14px;
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--border);
+  box-shadow:
+    var(--shadow-lg),
+    0 0 0 1px rgba(255,255,255,0.15) inset,
+    0 -1px 2px rgba(0,0,0,0.05) inset;
+}
+
+[data-theme="dark"] .bottom-nav, html.dark .bottom-nav {
+  box-shadow:
+    var(--shadow-lg),
+    0 0 0 1px rgba(255,255,255,0.06) inset,
+    0 -1px 2px rgba(0,0,0,0.2) inset;
+}
+
+.nav-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-sec);
+  opacity: 0.35;
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.nav-dot:hover:not(.active) {
+  opacity: 0.6;
+  transform: scale(1.4);
+}
+
+.nav-dot.active {
+  opacity: 1;
+  transform: scale(1.8);
+  background: var(--ios-blue);
+  box-shadow: 0 0 8px rgba(0,122,255,0.4);
+}
+
+/* ─── Icon Buttons (nav arrows) ─── */
+.btn-icon {
+  background: transparent;
+  border: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-main);
+  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.btn-icon:hover:not(:disabled) {
+  background: rgba(128, 128, 128, 0.12);
+  transform: scale(1.08);
+}
+
+.btn-icon:active:not(:disabled) { transform: scale(0.92); }
+.btn-icon:disabled { opacity: 0.3; cursor: not-allowed; }
+
+/* ─── Action Buttons (macOS style) ─── */
+.action-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 7px 16px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  border: 1px solid var(--border-strong);
+  background: var(--bg-card);
+  backdrop-filter: blur(20px);
+  color: var(--text-main);
+  box-shadow: var(--shadow-sm);
+}
+
+.action-button:hover:not(:disabled) {
+  background: var(--bg-card-secondary);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.action-button:active:not(:disabled) {
+  transform: scale(0.97);
+  box-shadow: var(--shadow-sm);
+}
+
+.action-button.primary {
+  background: var(--ios-blue);
+  color: #fff;
+  border: 1px solid rgba(0,0,0,0.1);
+  box-shadow: 0 2px 8px rgba(0,122,255,0.3);
+}
+
+.action-button.primary:hover:not(:disabled) {
+  background: #0066d6;
+  box-shadow: 0 4px 16px rgba(0,122,255,0.4);
+  transform: translateY(-1px);
+}
+
+.action-button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+[data-theme="dark"] .action-button:active:not(:disabled),
+html.dark .action-button:active:not(:disabled) {
+  background: rgba(255,255,255,0.08);
+}
+
+/* ─── Top Bar Icon Buttons ─── */
+.macos-icon-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--bg-card);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.macos-icon-btn:hover {
+  background: var(--bg-card-secondary);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.macos-icon-btn:active {
+  transform: scale(0.93);
+  box-shadow: none;
+}
+
+/* No-scrollbar utility for dropdowns */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ─── Utilities ─── */
+.flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ─── Gradient Text ─── */
+.gradient-text {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 40%, #ec4899 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ════════════════════════════════════════════════════════════════
+   LANDING PAGE — Scroll-Driven Dark Showcase
+   ════════════════════════════════════════════════════════════════ */
+
+.landing-wrapper {
+  background: #0f1012; /* Deep dark grey/black, matching screenshot 1 */
+  color: #fff;
+}
+
+/* ── Hero Section (The initial viewport) ────────────────────────── */
+.hero-section {
+  position: relative;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 0 5%;
+  scroll-snap-align: start;
+}
+
+.hero-content {
+  text-align: center;
+  position: relative; /* REQUIRED for z-index to work */
+  z-index: 20; 
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: auto;
+  margin-top: -48vh; /* Push text much higher up */
+}
+
+.hero-badge {
+  color: #facc15; /* Yellow text */
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 24px;
+}
+
+.hero-heading {
+  font-family: 'Outfit', sans-serif;
+  font-size: clamp(3.5rem, 7vw, 6rem);
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+  color: #ffffff;
+  margin: 0 0 32px 0;
+  text-shadow: 0 10px 30px rgba(0,0,0,0.8); /* help it pop */
+}
+
+.hero-start-btn {
+  background: #facc15;
+  color: #000;
+  padding: 16px 36px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 1.1rem;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.2s ease, background 0.2s ease;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.4);
+}
+
+.hero-start-btn:hover {
+  transform: scale(1.05);
+  background: #fde047;
+}
+
+/* ── Background Mockup & Shapes ─────────────────────────────── */
+.hero-background-elements {
+  position: absolute;
+  inset: 0;
+  z-index: 5; /* Below text (20), above background */
+  pointer-events: none;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hero-mockup-positioner {
+  position: absolute;
+  top: 65%; /* Pushed DOWN so text is literally above it */
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-4deg); 
+  width: 900px;
+  max-width: 85vw;
+  border-radius: 24px;
+}
+
+.hero-mockup-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.hero-main-mockup {
+  width: 100%;
+  height: auto;
+  border-radius: 24px;
+  filter: drop-shadow(0 30px 60px rgba(0,0,0,0.8));
+  opacity: 0.9; /* Slightly faded so text is legible */
+}
+
+/* Shiny screen protector glare effect */
+.hero-mockup-glare {
+  position: absolute;
+  inset: 0;
+  border-radius: 24px;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.25) 0%,
+    rgba(255, 255, 255, 0.05) 30%,
+    rgba(255, 255, 255, 0) 50%,
+    rgba(255, 255, 255, 0.05) 80%,
+    rgba(255, 255, 255, 0.1) 100%
+  );
+  box-shadow: inset 0 1px 1px rgba(255,255,255,0.4);
+  pointer-events: none;
+}
+
+/* Peeking Doctor Pixel Art */
+.hero-peek-doctor {
+  position: absolute;
+  top: -60px; /* Pull further up */
+  left: -90px; /* Pull further left to be fully visible */
+  z-index: -1; /* Behind the mockup */
+  filter: drop-shadow(0 15px 25px rgba(0,0,0,0.6));
+}
+
+/* Peeking QR Code / Barcode */
+.hero-peek-qr {
+  position: absolute;
+  top: -40px;
+  right: -60px;
+  width: 90px;
+  height: 90px;
+  background: white;
+  border-radius: 12px;
+  z-index: -1; /* Behind the mockup */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.7);
+}
+
+
+/* Mocking the yellow spiky star from the screenshot */
+.hero-starburst {
+  position: absolute;
+  bottom: 15%;
+  right: 15%;
+  width: 120px;
+  height: 120px;
+  background: #facc15;
+  clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+  animation: spin 30s linear infinite;
+  opacity: 0.9;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Dark floaty feature circle icons with medical theme */
+.hero-circle {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(30, 35, 45, 0.8); /* Dark gray/navy */
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+  animation: float 6s ease-in-out infinite;
+}
+
+@keyframes float {
+  0% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-15px) rotate(5deg); }
+  100% { transform: translateY(0px) rotate(0deg); }
+}
+
+.hero-circle-1 {
+  width: 90px;
+  height: 90px;
+  bottom: 20%;
+  left: 15%;
+  animation-delay: 0s;
+}
+
+.hero-circle-2 {
+  width: 70px;
+  height: 70px;
+  top: 25%;
+  left: 12%;
+  animation-delay: -2s;
+}
+
+.hero-circle-3 {
+  width: 100px;
+  height: 100px;
+  bottom: 30%;
+  right: 10%;
+  animation-delay: -4s;
+}
+
+.hero-circle-4 {
+  width: 50px;
+  height: 50px;
+  top: 20%;
+  right: 25%;
+  animation-delay: -1s;
+}
+
+/* ── Diagonal Scrolling Marquee ─────────────────────────────── */
+.hero-marquee-container {
+  position: relative;
+  width: 100%;
+  height: 80px; /* Space it takes in the document flow */
+  margin-top: 15vh; /* Push deeper below the initial fold */
+  margin-bottom: 50px;
+  z-index: 15;
+}
+
+.hero-marquee {
+  position: absolute;
+  top: 50%; /* Center it within the container */
+  left: -10vw;
+  width: 120vw; /* Wider than screen to cover corners when tilted */
+  background: #facc15;
+  padding: 16px 0;
+  transform: translateY(-50%) rotate(-4deg); /* Tilt parallel to mockup */
+  box-shadow: 0 15px 35px rgba(0,0,0,0.4);
+  overflow: hidden;
+  display: flex;
+  white-space: nowrap;
+}
+
+.hero-marquee-track {
+  display: flex;
+  align-items: center;
+  /* Animate X-axis continuously to left */
+  animation: marquee-scroll 35s linear infinite;
+  width: max-content;
+}
+
+.hero-marquee-content {
+  display: flex;
+  align-items: center;
+  padding-right: 15px; /* Ensures seamless merge with next duplicate */
+}
+
+.hero-marquee span {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 800;
+  font-size: 1.5rem;
+  color: #11151f; /* dark text on yellow */
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+}
+
+.hero-marquee span.bullet {
+  margin: 0 40px;
+  font-size: 1.8rem;
+  opacity: 0.5;
+}
+
+@keyframes marquee-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-33.3333%); } /* Shifts exactly 1 out of 3 duplicates */
+}
+
+/* ── Transition Section ────────────────────────────────────────── */
+.transition-hero-section {
+  min-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 0 5%;
+  background: #0f1012;
+  position: relative;
+  z-index: 10;
+  scroll-snap-align: start;
+}
+
+.transition-heading {
+  font-family: 'Outfit', sans-serif;
+  font-size: clamp(2.5rem, 5vw, 4.5rem);
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  color: #ffffff;
+  margin: 0 0 24px 0;
+  text-transform: uppercase;
+}
+
+.transition-subheading {
+  font-family: 'Inter', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 400;
+  color: rgba(255,255,255,0.6);
+  margin-bottom: 40px;
+  max-width: 600px;
+}
+
+.transition-btn {
+  margin-top: 10px;
+}
+
+/* ── Showcase Scroll Container (Tall, drives the animation) ───── */
+.showcase-scroll-container {
+  position: relative;
+  width: 100%;
+  scroll-snap-align: start;
+}
+
+/* The actual visible UI that sticks to the screen */
+.sticky-showcase-view {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 28px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+/* The central dark card */
+.landing-card {
+  position: relative;
+  width: 100%;
+  max-width: 1400px;
+  height: calc(100vh - 56px);
+  background: #0e0f12;
+  border-radius: 32px;
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow:
+    0 30px 80px rgba(0,0,0,0.6),
+    0 0 0 1px rgba(255,255,255,0.03) inset;
+  display: flex;
+  overflow: visible; /* crucial for half-outside icons */
+}
+
+/* ── Vertical Icon Sidebar ──────────────────────────────────── */
+.landing-sidebar {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0px;
+  z-index: 10;
+}
+
+.landing-icon-btn {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  flex-shrink: 0;
+  cursor: pointer;
+  background: #111;
+  margin-bottom: -15px; /* stacks them tightly */
+}
+
+.landing-icon-btn.active {
+  transform: scale(1.05);
+  margin-bottom: 0px;
+  margin-top: 15px;
+}
+
+/* ── Content Area ──────────────────────────────────────────── */
+.landing-content-area {
+  flex: 1;
+  display: flex;
+  border-radius: 32px;
+  position: relative;
+  min-width: 0;
+}
+
+.landing-content-inner {
+  position: absolute;
+  top: 40px; left: 64px; right: 40px; bottom: 40px;
+  display: flex;
+  gap: 52px;
+  align-items: center;
+}
+
+/* Left text section */
+.landing-text-section {
+  flex: 0 0 42%;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.landing-step-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+  opacity: 0.9;
+}
+
+.landing-heading {
+  font-family: 'Outfit', -apple-system, sans-serif;
+  font-size: clamp(2.2rem, 4vw, 3.4rem);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+  color: #fff;
+  margin: 0 0 22px 0;
+  text-transform: uppercase;
+}
+
+.landing-description {
+  font-size: 0.92rem;
+  line-height: 1.7;
+  color: rgba(255,255,255,0.5);
+  margin-bottom: 32px;
+  font-weight: 400;
+  max-width: 420px;
+}
+
+.landing-cta-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 28px;
+  border-radius: 14px;
+  border: none;
+  color: #fff;
+  font-family: 'Inter', -apple-system, sans-serif;
+  font-size: 0.88rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  width: fit-content;
+  cursor: pointer;
+}
+
+/* ── Right Preview Section ─────────────────────────────────── */
+.landing-preview-section {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.preview-grid {
+  display: grid;
+  gap: 12px;
+  width: 100%;
+  max-width: 520px;
+}
+
+.preview-grid.specialty-grid {
+  grid-template-columns: 1fr 1fr;
+}
+
+.preview-grid.stats-grid {
+  grid-template-columns: 1fr 1fr;
+}
+
+/* ── Preview Cards — Specialty/Algorithm style ──────────────── */
+.landing-preview-card.specialty {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 16px;
+  transition: all 0.3s ease;
+}
+
+.landing-preview-card.specialty:hover {
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.1);
+  transform: translateY(-2px);
+}
+
+.preview-card-emoji {
+  font-size: 1.6rem;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.04);
+  border-radius: 12px;
+  flex-shrink: 0;
+}
+
+.preview-card-info {
+  min-width: 0;
+}
+
+.preview-card-name {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: rgba(255,255,255,0.9);
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.preview-card-desc {
+  font-size: 0.72rem;
+  color: rgba(255,255,255,0.35);
+  margin-bottom: 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.preview-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.preview-card-tag {
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+.preview-card-patients {
+  font-size: 0.65rem;
+  color: rgba(255,255,255,0.3);
+}
+
+/* ── Preview Cards — Stats style ────────────────────────────── */
+.landing-preview-card.stats {
+  padding: 20px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 18px;
+  transition: all 0.3s ease;
+}
+
+.landing-preview-card.stats:hover {
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.1);
+  transform: translateY(-2px);
+}
+
+.stats-card-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+
+.stats-card-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: rgba(255,255,255,0.4);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 4px;
+}
+
+.stats-card-value {
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.3rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 4px;
+}
+
+.stats-card-sub {
+  font-size: 0.7rem;
+  color: rgba(255,255,255,0.3);
+}
+
+/* ── Bottom bar & Branding ──────────────────────────────────── */
+.landing-bottom-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 40px 24px 40px; /* More bottom padding for visual balance */
+  pointer-events: none;
+  z-index: 30;
+}
+
+.landing-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  background: #facc15;
+  border-radius: 12px;
+  pointer-events: auto;
+}
+
+.sticky-scroll-hint {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.65rem;
+  color: rgba(255,255,255,0.3);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 700;
+}
+
+.landing-bottom-badges {
+  color: rgba(255,255,255,0.3);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+/* ── Responsive ────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .hero-heading {
+    font-size: 3rem;
+  }
+
+  .landing-content-inner {
+    flex-direction: column;
+    gap: 28px;
+  }
+
+  .landing-text-section {
+    flex: none;
+    max-width: 100%;
+  }
+
+  .landing-heading {
+    font-size: 2rem;
+  }
+
+  .landing-content-area {
+    padding: 28px 24px;
+  }
+
+  .landing-sidebar {
+    flex-direction: row;
+    padding: 12px;
+    border-right: none;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+
+  .landing-card {
+    flex-direction: column;
+  }
+
+  .landing-icon-btn {
+    width: 36px;
+    height: 36px;
+  }
+
+  .landing-bottom-bar {
+    padding: 10px 20px 20px 20px;
+  }
+}
+
+/* ── Dynamic Image Previews (Bento Grid) ──────────────────────── */
+.landing-preview-section {
+  flex: 1;
+  height: 100%;
+  min-height: 500px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  /* Expands the 3D opacity clipping boundaries to prevent hover cut-offs */
+  margin: -100px;
+  padding: 100px;
+}
+
+.preview-images-container {
+  flex: 1;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  perspective: 1200px;
+  transform-style: preserve-3d;
+}
+
+.preview-img-wrapper {
+  position: absolute;
+  border-radius: 24px;
+  box-shadow: 0 16px 40px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.06);
+  overflow: hidden;
+  z-index: 1;
+  transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), z-index 0s, box-shadow 0.4s ease;
+}
+
+.preview-img-wrapper:hover {
+  z-index: 50 !important;
+  transform: rotateY(0deg) rotateX(0deg) scale(1.15) translateZ(80px) !important;
+  box-shadow: 0 40px 100px rgba(0,0,0,0.8), 0 0 0 2px rgba(255,255,255,0.2);
+}
+
+.preview-img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.preview-glare {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(115deg, transparent 15%, rgba(255,255,255,0.12) 35%, transparent 60%);
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* ── Layouts tailored exactly per step ── */
+
+/* Single image layout (All steps) */
+.layout-single .preview-img-0 {
+  position: relative;
+  width: 85%;
+  margin: 0 auto;
+  height: auto;
+  transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), box-shadow 0.4s ease;
+}
+.layout-single .preview-img-0:hover {
+  transform: rotateY(0deg) rotateX(0deg) scale(1.10) translateZ(50px) !important;
+}
+
+/* Step 2: 2 real photos, even stagger */
+.layout-step-2 .preview-img-0 { width: 62%; top: 12%; left: 5%; z-index: 2; }
+.layout-step-2 .preview-img-1 { width: 62%; bottom: 12%; right: 5%; z-index: 1; }
+
+/* Step 3: 2 photos, standard stagger */
+.layout-step-3 .preview-img-0 { width: 62%; top: 15%; left: 5%; z-index: 2; }
+.layout-step-3 .preview-img-1 { width: 62%; bottom: 15%; right: 5%; z-index: 1; }
+
+/* Step 4: 3 photos all visible, NOT stacked (Even horizontal spread) */
+.layout-step-4 .preview-img-0 { width: 40%; top: 35%; left: -2%; z-index: 1; }
+.layout-step-4 .preview-img-1 { width: 40%; top: 35%; left: 30%; z-index: 2; }
+.layout-step-4 .preview-img-2 { width: 40%; top: 35%; left: 62%; z-index: 3; }
+
+/* Step 5: 3 photos bigger and closer (tight vertical bento) */
+.layout-step-5 .preview-img-0 { width: 55%; top: 5%; left: 15%; z-index: 3; }
+.layout-step-5 .preview-img-1 { width: 55%; top: 30%; left: 5%; z-index: 2; }
+.layout-step-5 .preview-img-2 { width: 55%; bottom: 5%; right: 5%; z-index: 1; }
+
+/* Step 6: 2 photos, standard stagger */
+.layout-step-6 .preview-img-0 { width: 62%; top: 12%; left: 5%; z-index: 2; }
+.layout-step-6 .preview-img-1 { width: 62%; bottom: 12%; right: 5%; z-index: 1; }
+
+/* Step 7: 4 photos closer, even, little bigger (tight tiled 2x2) */
+.layout-step-7 .preview-img-0 { width: 42%; top: 10%; left: 6%; z-index: 1; }
+.layout-step-7 .preview-img-1 { width: 42%; top: 15%; right: 6%; z-index: 2; }
+.layout-step-7 .preview-img-2 { width: 42%; bottom: 15%; left: 10%; z-index: 3; }
+.layout-step-7 .preview-img-3 { width: 42%; bottom: 10%; right: 8%; z-index: 4; }
