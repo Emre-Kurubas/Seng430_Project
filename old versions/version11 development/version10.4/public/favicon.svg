@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#6C5CE7"/>
+      <stop offset="50%" stop-color="#A78BFA"/>
+      <stop offset="100%" stop-color="#C8F560"/>
+    </linearGradient>
+    <linearGradient id="pulse" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#e4ffe0"/>
+    </linearGradient>
+    <linearGradient id="ring" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#6C5CE7"/>
+      <stop offset="100%" stop-color="#C8F560"/>
+    </linearGradient>
+  </defs>
+  <!-- Rounded square background -->
+  <rect x="32" y="32" width="448" height="448" rx="112" ry="112" fill="url(#bg)" opacity="0.12"/>
+  <rect x="32" y="32" width="448" height="448" rx="112" ry="112" fill="none" stroke="url(#ring)" stroke-width="16"/>
+  <!-- Plus / cross shape (health symbol) - subtle background -->
+  <rect x="216" y="100" width="80" height="312" rx="40" fill="url(#bg)" opacity="0.18"/>
+  <rect x="100" y="216" width="312" height="80" rx="40" fill="url(#bg)" opacity="0.18"/>
+  <!-- Heartbeat / pulse line -->
+  <polyline 
+    points="80,272 168,272 200,272 224,168 264,376 304,192 336,272 344,272 432,272" 
+    stroke="url(#ring)" 
+    stroke-width="32" 
+    stroke-linecap="round" 
+    stroke-linejoin="round"
+    fill="none"
+  />
+  <!-- Data nodes on the pulse (ML representation) -->
+  <circle cx="224" cy="168" r="16" fill="#6C5CE7"/>
+  <circle cx="264" cy="376" r="16" fill="#A78BFA"/>
+  <circle cx="304" cy="192" r="16" fill="#C8F560"/>
+</svg>
